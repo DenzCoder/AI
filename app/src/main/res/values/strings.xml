@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ASISTEN</string>
+
+    <!-- Navigasi utama -->
+    <string name="nav_beranda">Beranda</string>
+    <string name="nav_jadwal">Jadwal</string>
+    <string name="nav_aktivitas">Aktivitas</string>
+    <string name="nav_hanako">AI Hanako</string>
+    <string name="nav_profil">Profil</string>
+
+    <!-- Sapaan -->
+    <string name="sapaan_pagi">Selamat pagi</string>
+    <string name="sapaan_siang">Selamat siang</string>
+    <string name="sapaan_sore">Selamat sore</string>
+    <string name="sapaan_malam">Selamat malam</string>
+
+    <!-- Konten layar (Fase 1: kerangka navigasi) -->
+    <string name="beranda_judul">Beranda</string>
+    <string name="beranda_keterangan">Ringkasan harianmu akan tampil di sini setelah dasbor selesai dibuat.</string>
+    <string name="jadwal_judul">Jadwal</string>
+    <string name="jadwal_keterangan">Kalender, jadwal sekolah, dan pengingat akan tersedia di sini.</string>
+    <string name="aktivitas_judul">Aktivitas</string>
+    <string name="aktivitas_keterangan">Tugas, kebiasaan, dan riwayat aktivitasmu akan tersedia di sini.</string>
+    <string name="hanako_judul">AI Hanako</string>
+    <string name="hanako_keterangan">Percakapan dan perintah untuk Hanako akan tersedia di sini.</string>
+    <string name="profil_judul">Profil</string>
+    <string name="profil_keterangan">Pengaturan profil, tema, dan privasi akan tersedia di sini.</string>
+    <string name="status_pengembangan">Bagian ini masih dalam pengembangan.</string>
+</resources>
