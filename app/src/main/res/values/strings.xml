@@ -15,16 +15,64 @@
     <string name="sapaan_sore">Selamat sore</string>
     <string name="sapaan_malam">Selamat malam</string>
 
-    <!-- Konten layar (Fase 1: kerangka navigasi) -->
-    <string name="beranda_judul">Beranda</string>
-    <string name="beranda_keterangan">Ringkasan harianmu akan tampil di sini setelah dasbor selesai dibuat.</string>
+    <!-- Bagian yang fiturnya hadir di fase berikutnya -->
     <string name="jadwal_judul">Jadwal</string>
     <string name="jadwal_keterangan">Kalender, jadwal sekolah, dan pengingat akan tersedia di sini.</string>
     <string name="aktivitas_judul">Aktivitas</string>
     <string name="aktivitas_keterangan">Tugas, kebiasaan, dan riwayat aktivitasmu akan tersedia di sini.</string>
     <string name="hanako_judul">AI Hanako</string>
     <string name="hanako_keterangan">Percakapan dan perintah untuk Hanako akan tersedia di sini.</string>
-    <string name="profil_judul">Profil</string>
-    <string name="profil_keterangan">Pengaturan profil, tema, dan privasi akan tersedia di sini.</string>
     <string name="status_pengembangan">Bagian ini masih dalam pengembangan.</string>
+
+    <!-- Kartu Hanako -->
+    <string name="hanako_ilustrasi_desc">Ilustrasi Hanako</string>
+    <string name="hanako_kartu_judul">Hai, aku Hanako.</string>
+    <string name="hanako_kartu_isi">Aku akan membantumu mengatur hari setelah fitur-fiturnya selesai dibuat.</string>
+
+    <!-- Widget Beranda -->
+    <string name="widget_jadwal_judul">Jadwal hari ini</string>
+    <string name="widget_jadwal_ket">Belum ada jadwal tercatat. Fitur jadwal belum tersedia.</string>
+    <string name="widget_tugas_judul">Tugas dan prioritas</string>
+    <string name="widget_tugas_ket">Belum ada tugas tercatat. Fitur tugas belum tersedia.</string>
+    <string name="widget_sekolah_judul">Info sekolah</string>
+    <string name="widget_sekolah_ket">Jadwal pelajaran dan piket belum diatur. Fitur sekolah belum tersedia.</string>
+    <string name="widget_sholat_judul">Ringkasan sholat</string>
+    <string name="widget_sholat_ket">Belum ada catatan sholat. Fitur pencatat sholat belum tersedia.</string>
+    <string name="widget_kebiasaan_judul">Kemajuan kebiasaan</string>
+    <string name="widget_kebiasaan_ket">Belum ada kebiasaan tercatat. Fitur kebiasaan belum tersedia.</string>
+    <string name="widget_keuangan_judul">Ringkasan keuangan</string>
+    <string name="widget_keuangan_ket">Belum ada transaksi tercatat. Fitur keuangan belum tersedia.</string>
+    <string name="widget_tujuan_judul">Tujuan dan pengingat</string>
+    <string name="widget_tujuan_ket">Belum ada tujuan tercatat. Fitur tujuan belum tersedia.</string>
+
+    <!-- Atur widget -->
+    <string name="beranda_atur_widget">Atur widget</string>
+    <string name="atur_judul">Atur widget</string>
+    <string name="atur_keterangan">Urutkan atau sembunyikan kartu di Beranda. Perubahan belum tersimpan setelah aplikasi ditutup.</string>
+    <string name="atur_selesai">Selesai</string>
+    <string name="atur_urungkan">Urungkan</string>
+    <string name="atur_standar">Kembalikan standar</string>
+    <string name="atur_naik">Pindahkan %1$s ke atas</string>
+    <string name="atur_turun">Pindahkan %1$s ke bawah</string>
+    <string name="atur_semua_tersembunyi">Semua kartu disembunyikan. Buka Atur widget untuk menampilkannya lagi.</string>
+
+    <!-- Profil dan tampilan -->
+    <string name="profil_judul">Profil</string>
+    <string name="profil_tema">Tema</string>
+    <string name="tema_sistem">Ikuti sistem</string>
+    <string name="tema_terang">Terang</string>
+    <string name="tema_gelap">Gelap</string>
+    <string name="profil_aksen">Warna aksen</string>
+    <string name="aksen_jingga">Jingga</string>
+    <string name="aksen_ungu">Ungu</string>
+    <string name="aksen_hijau">Hijau</string>
+    <string name="aksen_biru">Biru</string>
+    <string name="profil_ukuran_teks">Ukuran teks</string>
+    <string name="teks_kecil">Kecil</string>
+    <string name="teks_normal">Normal</string>
+    <string name="teks_besar">Besar</string>
+    <string name="profil_animasi">Animasi</string>
+    <string name="profil_animasi_ket">Matikan untuk mengurangi gerakan di aplikasi.</string>
+    <string name="profil_belum_tersimpan">Pengaturan tampilan ini belum tersimpan setelah aplikasi ditutup. Penyimpanan permanen hadir di Fase 3.</string>
+    <string name="terpilih">Terpilih</string>
 </resources>

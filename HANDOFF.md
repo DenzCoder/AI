@@ -1,80 +1,81 @@
-# HANDOFF — after Phase 1 (Foundation)
+# HANDOFF — after Phase 2 (UI and Dashboard)
 
 Last updated: 2026-11-02
 
 ## Status in one line
-Phase 1 source code is written, but **the build and unit tests have NOT been run**. Phase 1 is therefore NOT verified and Phase 2 must not start until the GitHub Actions build is green.
+Phases 1 and 2 source code is written. **Nothing has been compiled, unit-tested, or installed** (build hosts are blocked in the authoring sandbox). Do not start Phase 3 until the GitHub Actions build is green and the debug APK has been tried on the phone.
 
 ## Completed work
-- Gradle project (Kotlin DSL, version catalog, Gradle wrapper 9.6.0), module `:app`.
-- AGP 9.5.0 with built-in Kotlin (no `org.jetbrains.kotlin.android` plugin), Kotlin 2.4.20, Compose BOM 2026.09.00, Material 3.
-- Package `id.asisten.app` with `domain/` (pure logic), `ui/` (theme, navigation, screens, beranda). MVVM: `BerandaViewModel` exposes a `StateFlow<Sapaan>`.
-- Bottom navigation with the 5 required tabs: Beranda, Jadwal, Aktivitas, AI Hanako, Profil (string routes, state saved/restored).
-- Basic theme following system light/dark. Edge-to-edge enabled. Adaptive launcher icon (simple flower mark).
-- All user-facing text lives in `res/values/strings.xml` in Indonesian.
-- 4 unit tests for the greeting logic (`SapaanProviderTest`).
-- GitHub Actions workflow `.github/workflows/build.yml`: unit tests, `assembleDebug`, uploads debug APK + test reports.
-- Manifest requests no permissions; `allowBackup=false` (secure default).
 
-## Current project structure
+### Phase 1 (Foundation) — see CHANGELOG.md
+Gradle/AGP 9.5.0/Kotlin 2.4.20/Compose BOM 2026.09.00, MVVM packages, 5-tab bottom navigation, CI workflow.
+
+### Phase 2 (UI and Dashboard)
+- **Design system / theme:** `AsistenTheme(pengaturan, darkTheme)` builds light/dark Material 3 schemes from the chosen accent; text size scales via `LocalDensity.fontScale` (0.9 / 1.0 / 1.15); status/navigation bar icon contrast follows the in-app theme.
+- **Settings (in memory):** `PengaturanViewModel` — theme mode (Ikuti sistem/Terang/Gelap), 4 accent colors, 3 text sizes, animation on/off. The animation toggle really switches the tab transitions between fade and none.
+- **Profil screen:** controls for all of the above, plus an honest note that settings are not yet saved after the app closes.
+- **Beranda dashboard:** time-of-day greeting, Hanako card with a lightweight static vector illustration (long orange hair, purple eyes, white flower, white/navy outfit), and 7 widget cards (Jadwal hari ini, Tugas dan prioritas, Info sekolah, Ringkasan sholat, Kemajuan kebiasaan, Ringkasan keuangan, Tujuan dan pengingat). Each card shows an honest "no data / feature not available yet" text — no fake data.
+- **Widget customization:** "Atur widget" mode with move up/down, show/hide switch, **Urungkan** (undo, history capped at 20) and **Kembalikan standar**. Pure logic lives in `domain/dasbor/TataLetakWidget.kt`.
+- **Unit tests:** `TataLetakWidgetTest` (9 tests) and `SapaanProviderTest` (4 tests).
+
+## Deliberately NOT done in Phase 2 (and why)
+- **Persistence** of settings and widget arrangement: roadmap puts DataStore/Room in Phase 3. Until then they reset when the app process ends. "Save arrangement / restore previous arrangements" is therefore only partly done (in-session undo + reset to default); permanent saving is a Phase 3 task.
+- **Multiple Hanako expressions:** only one static expression exists. More pre-rendered expressions can be added when Hanako's chat UI is built (Phase 6).
+- **Dashboard shortcuts to modules** (Keuangan, Doa, etc.) and the **Morning briefing / Life Overview** cards: the modules do not exist yet, so adding buttons would be non-functional. Add them as each module lands (Phases 4, 8, 9).
+- Onboarding: Phase 3 (needs persistence for the preferred name).
+
+## Current project structure (changes since Phase 1 marked *)
 ```
-asisten/
-  settings.gradle.kts  build.gradle.kts  gradle.properties
-  gradle/libs.versions.toml  gradle/wrapper/*  gradlew  gradlew.bat
-  .github/workflows/build.yml
-  app/build.gradle.kts  app/proguard-rules.pro
-  app/src/main/AndroidManifest.xml
-  app/src/main/kotlin/id/asisten/app/
-    MainActivity.kt
-    domain/Sapaan.kt
-    ui/theme/Theme.kt
-    ui/navigation/{AsistenDestination,AsistenNavHost}.kt
-    ui/beranda/{BerandaViewModel,BerandaScreen}.kt
-    ui/screens/BagianScreen.kt
-  app/src/main/res/{values,values-night,drawable,mipmap-anydpi}
-  app/src/test/kotlin/id/asisten/app/domain/SapaanProviderTest.kt
-  docs/DEPENDENCIES.md  PROGRESS.md  HANDOFF.md  CHANGELOG.md
+app/src/main/kotlin/id/asisten/app/
+  MainActivity.kt *
+  domain/Sapaan.kt
+  domain/dasbor/TataLetakWidget.kt *        (WidgetBeranda, TataLetakWidget, RiwayatTataLetak)
+  domain/pengaturan/Pengaturan.kt *         (ModeTema, Aksen, UkuranTeks, Pengaturan)
+  ui/theme/Theme.kt *
+  ui/pengaturan/PengaturanViewModel.kt *
+  ui/navigation/{AsistenDestination,AsistenNavHost}.kt (NavHost *)
+  ui/beranda/{BerandaViewModel *,BerandaScreen *,WidgetTeks *}.kt
+  ui/profil/ProfilScreen.kt *
+  ui/screens/BagianScreen.kt
+app/src/main/res/drawable/hanako_ilustrasi.xml *
+app/src/main/res/values/strings.xml *
+app/src/test/kotlin/id/asisten/app/domain/{SapaanProviderTest,dasbor/TataLetakWidgetTest *}.kt
 ```
 
 ## Important technical decisions
-1. **AGP 9.5.0 + compileSdk 37.** `lifecycle 2.11.0` requires AGP >= 9.2.0 and compiles Compose against API 37, so older AGP would force pinning old libraries. AGP 9.5.0 needs Gradle 9.6.0 and JDK 17+ (CI uses JDK 17). `targetSdk` is 36 (conservative behavior-change surface); `minSdk` is 30.
-2. **Built-in Kotlin.** AGP 9 ships Kotlin support; only `org.jetbrains.kotlin.plugin.compose` is applied.
-3. **String routes** instead of type-safe Navigation, to avoid adding `kotlinx-serialization` (minimal dependencies). Navigation 2.10.2 is in maintenance mode; Navigation 3 can be reconsidered later but is not required.
-4. **No DI framework, no Application class yet.** Added only when a phase needs them (no empty placeholders).
-5. **Icons:** `material-icons-core` only (no `-extended`, which is very large).
-6. **Room (Phase 3) decision pending:** Room 2.8.5 (`androidx.room`, KSP/KAPT) is stable; Room 3.0.3 (`androidx.room3`) is also stable but is a breaking redesign (new package, `SQLiteDriver` required, all DAO functions `suspend`/`Flow`, KSP-only). Recommendation: decide at the start of Phase 3 after Phase 1 CI is green. Room 3 suits a new project; Room 2.8.5 is the lower-risk, more documented option.
-7. Build runs only in the cloud (GitHub Actions), matching the project's constraints.
+1. (Phase 1) AGP 9.5.0 + compileSdk 37, built-in Kotlin, string routes, no DI framework, `material-icons-core` only, Room 2.8.5 vs Room 3.0.3 to be decided at Phase 3 start (see docs/DEPENDENCIES.md).
+2. Pure logic (greeting, widget layout/undo) is kept in `domain/` with no Android/Compose types so it is unit-testable on the JVM.
+3. Accent drives `primary`; navy remains `secondary`. Container colors are derived with `lerp` toward white/black.
+4. Dark mode is resolved in `MainActivity` (needs `isSystemInDarkTheme()` for "Ikuti sistem") and passed to the theme.
+5. Widget arrangement is an immutable value + history list, so persisting it in Phase 3 only needs a serializer (order + hidden set).
 
-## Files changed
-All files are new (initial commit). See structure above.
+## Files changed in Phase 2
+New: `domain/dasbor/TataLetakWidget.kt`, `domain/pengaturan/Pengaturan.kt`, `ui/pengaturan/PengaturanViewModel.kt`, `ui/profil/ProfilScreen.kt`, `ui/beranda/WidgetTeks.kt`, `res/drawable/hanako_ilustrasi.xml`, `test/.../dasbor/TataLetakWidgetTest.kt`.
+Modified: `MainActivity.kt`, `ui/theme/Theme.kt`, `ui/navigation/AsistenNavHost.kt`, `ui/beranda/BerandaViewModel.kt`, `ui/beranda/BerandaScreen.kt`, `res/values/strings.xml`, docs.
 
 ## Tests performed and their REAL results
-- Environment inspection: JDK 21 present, Gradle 8.14.3 present, **no Android SDK**.
-- Network from this session: `repo.maven.apache.org`, `dl.google.com` and `services.gradle.org` are denied by the session proxy (HTTP 403). This cannot be bypassed.
-- `./gradlew testDebugUnitTest` attempted: **FAILED before any compilation** — it could not download `gradle-9.6.0-bin.zip` (proxy 403). No source was compiled and no test was run.
-- Gradle wrapper files were generated offline (`gradle wrapper --gradle-version 9.6.0`); that task succeeded.
-- **No APK exists.** None has been generated.
+- **Gradle build / unit tests / lint: NOT RUN.** The authoring sandbox blocks `services.gradle.org`, `repo.maven.apache.org`, `dl.google.com` (proxy 403) and has no Android SDK. Earlier attempt: `./gradlew testDebugUnitTest` failed before compiling anything (could not download Gradle 9.6.0).
+- **Static checks that WERE run** (Python script, not a compiler): all 9 XML resource files are well-formed; every `R.string.*`/`@string/*` reference exists in `strings.xml` and no string is unused; every referenced drawable/mipmap exists; brackets balance in all 15 Kotlin files; each file's `package` matches its directory. These checks cannot detect type errors, wrong imports, or API misuse.
+- **No APK exists.**
 
-## Known issues / risks (unverified because nothing was compiled)
-- Never compiled: first CI run may reveal errors in Gradle DSL (AGP 9 changes), imports, or dependency resolution.
-- Compose BOM 2026.09.00 maps material3 to 1.4.0 per the official mapping page; other mappings were not read.
-- `kotlin` 2.4.20 was confirmed released (JetBrains blog); `ksp` is not used yet (latest seen: 2.3.11).
-- CI SDK-license step assumes `$ANDROID_HOME/cmdline-tools/latest` exists on `ubuntu-latest`; AGP may need `platforms;android-37` auto-download.
-- Action versions (`@v4`) were not re-verified for 2026; newer majors may exist.
-- Hanako visuals, onboarding, and all data features are intentionally absent (later phases).
+## Known issues / risks (all unverified)
+- First CI run may fail on compile errors I could not catch (imports, Compose API signatures, AGP 9 DSL). Most likely places: `SystemBarStyle.auto` lambda in `MainActivity`, `clickable(role=…)` in `ProfilScreen`, `Density(...)` in `Theme`, `LifecycleEventEffect` usage, NavHost transition lambdas.
+- (resolved) unused `BorderStroke` import removed from `ProfilScreen.kt`.
+- Animation toggle covers tab transitions only; other animations will honor the same setting when they are added.
+- Settings and widget arrangement are lost when the process dies (by design until Phase 3).
+- CI action versions (`@v4`) and SDK-license step were not verified for 2026.
 
 ## Exact next steps
-1. Create an empty GitHub repository (private recommended).
-2. In Termux, from the project folder: `git remote add origin <url>` then `git push -u origin main`. (The project is already committed locally on branch `main`.)
-3. Open the repo's **Actions** tab and run **Build ASISTEN**. Copy the full log of any failure and paste it into the next session.
-4. When green: download the `asisten-debug-apk` artifact, install it on the realme Narzo 50i Prime, and confirm the 5 tabs navigate correctly and the greeting matches the time of day.
-5. Only then start Phase 2.
+1. Create a (private) GitHub repo; in Termux: `git remote add origin <url>` then `git push -u origin main`.
+2. Actions tab → run **Build ASISTEN**. If it fails, paste the full failing log into the next session; fix compile errors first, no new features.
+3. When green, install `asisten-debug-apk` on the realme Narzo 50i Prime and check: 5 tabs; greeting by time; Hanako card shows the illustration; Profil → theme/accent/text size/animation take effect immediately; Beranda → Atur widget → move/hide/undo/reset works; layout is not clipped at "Besar" text size.
+4. Then start Phase 3 (Local Database): first decide Room 2.8.5 vs Room 3.0.3, add KSP, DataStore for settings, Room for profile/memory/widget layout, migrations, onboarding.
 
 ## Continuation prompt (paste into the next session)
 ```
 Lanjutkan proyek ASISTEN dari HANDOFF.md terbaru (jangan mulai ulang, jangan minta saya mengulang persyaratan).
-Status: Fase 1 kodenya sudah ditulis tetapi build belum terverifikasi.
-Hasil GitHub Actions saya: <tempel log atau tulis "hijau, APK sudah terpasang dan 5 tab berfungsi">.
-Jika ada error: perbaiki sumbernya secara minimal, jelaskan penyebabnya, dan jangan menulis fitur Fase 2 dulu.
-Jika hijau: kerjakan Fase 2 (UI dan Dashboard) sesuai master prompt, lalu perbarui PROGRESS.md, HANDOFF.md, CHANGELOG.md dengan hasil tes yang nyata.
+Status: kode Fase 1 dan Fase 2 sudah ditulis tetapi belum pernah dikompilasi.
+Hasil GitHub Actions saya: <tempel log error, atau tulis "hijau, APK terpasang, semua pemeriksaan di langkah 3 berhasil" / sebutkan yang gagal>.
+Jika ada error: perbaiki penyebabnya secara minimal dan jelaskan, tanpa menambah fitur baru.
+Jika hijau: kerjakan Fase 3 (Local Database) sesuai master prompt, termasuk menyimpan pengaturan tampilan dan tata letak widget secara permanen, lalu perbarui PROGRESS.md, HANDOFF.md, CHANGELOG.md dengan hasil tes yang nyata.
 ```
