@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [Unreleased] — Phases 3 and 4: Local Database; Schedule and Activities (2026-11-03)
+### Added
+- Room database (version 1) with memory, activities, school hours, timetable, duty roster, tasks, goals and milestones; DAOs, entity/domain mappers, repositories, hand-written dependency container.
+- DataStore storage for appearance settings, profile and the dashboard layout with undo history (lenient text codec).
+- First-launch onboarding (name, appearance, privacy and opt-in memory) and a Memori Hanako screen (view, add, edit, delete, delete all, sensitive flag, switch off).
+- Jadwal tab: day/week/month calendar, activity form, conflict detection with free-slot suggestion; school hours, timetable with breaks, duty roster.
+- Aktivitas tab: tasks/homework/exams, goals with milestones and progress, completion history.
+- Beranda cards for schedule, tasks, school and goals now show recorded data.
+- `tools/jvm-check.sh` (JVM-only logic check), 109 JVM unit tests, 5 instrumented DB tests (not run).
+- CI uploads the Room schema folder as an artifact.
+
+### Changed
+- Appearance settings, name, memory switch and widget arrangement now persist across restarts.
+- Build: added KSP 2.3.10, Room 2.8.5, DataStore 1.3.0 and test libraries; removed the explicit `sourceSets` block (built-in Kotlin handles `src/main/kotlin`).
+- Profil screen: name editing and memory entry; outdated "not saved yet" notes removed.
+
+### Not done / not verified
+- Gradle/KSP/Compose build, instrumented tests and on-device behavior have never run (see HANDOFF.md).
+- School supply checklist, OCR import, bulk reschedule: not implemented.
+- Automatic-learning memory fields (needs a migration in Phase 9).
+
 ## [Unreleased] — Phase 2: UI and Dashboard (2026-11-02)
 ### Added
 - Dynamic theme: light/dark/system, 4 accent colors, 3 text sizes, status-bar contrast handling.

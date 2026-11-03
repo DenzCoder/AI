@@ -4,6 +4,7 @@
     <!-- Phase 1 requests no permissions. Permissions are added only by the phase that needs them. -->
 
     <application
+        android:name=".AsistenAplikasi"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"

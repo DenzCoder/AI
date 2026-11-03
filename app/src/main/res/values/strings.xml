@@ -16,10 +16,6 @@
     <string name="sapaan_malam">Selamat malam</string>
 
     <!-- Bagian yang fiturnya hadir di fase berikutnya -->
-    <string name="jadwal_judul">Jadwal</string>
-    <string name="jadwal_keterangan">Kalender, jadwal sekolah, dan pengingat akan tersedia di sini.</string>
-    <string name="aktivitas_judul">Aktivitas</string>
-    <string name="aktivitas_keterangan">Tugas, kebiasaan, dan riwayat aktivitasmu akan tersedia di sini.</string>
     <string name="hanako_judul">AI Hanako</string>
     <string name="hanako_keterangan">Percakapan dan perintah untuk Hanako akan tersedia di sini.</string>
     <string name="status_pengembangan">Bagian ini masih dalam pengembangan.</string>
@@ -31,11 +27,11 @@
 
     <!-- Widget Beranda -->
     <string name="widget_jadwal_judul">Jadwal hari ini</string>
-    <string name="widget_jadwal_ket">Belum ada jadwal tercatat. Fitur jadwal belum tersedia.</string>
+    <string name="widget_jadwal_ket">Belum ada jadwal hari ini.</string>
     <string name="widget_tugas_judul">Tugas dan prioritas</string>
-    <string name="widget_tugas_ket">Belum ada tugas tercatat. Fitur tugas belum tersedia.</string>
+    <string name="widget_tugas_ket">Belum ada tugas yang menunggu.</string>
     <string name="widget_sekolah_judul">Info sekolah</string>
-    <string name="widget_sekolah_ket">Jadwal pelajaran dan piket belum diatur. Fitur sekolah belum tersedia.</string>
+    <string name="widget_sekolah_ket">Jam sekolah hari ini belum diatur. Atur di tab Jadwal, bagian Sekolah.</string>
     <string name="widget_sholat_judul">Ringkasan sholat</string>
     <string name="widget_sholat_ket">Belum ada catatan sholat. Fitur pencatat sholat belum tersedia.</string>
     <string name="widget_kebiasaan_judul">Kemajuan kebiasaan</string>
@@ -43,12 +39,12 @@
     <string name="widget_keuangan_judul">Ringkasan keuangan</string>
     <string name="widget_keuangan_ket">Belum ada transaksi tercatat. Fitur keuangan belum tersedia.</string>
     <string name="widget_tujuan_judul">Tujuan dan pengingat</string>
-    <string name="widget_tujuan_ket">Belum ada tujuan tercatat. Fitur tujuan belum tersedia.</string>
+    <string name="widget_tujuan_ket">Belum ada tujuan aktif.</string>
 
     <!-- Atur widget -->
     <string name="beranda_atur_widget">Atur widget</string>
     <string name="atur_judul">Atur widget</string>
-    <string name="atur_keterangan">Urutkan atau sembunyikan kartu di Beranda. Perubahan belum tersimpan setelah aplikasi ditutup.</string>
+    <string name="atur_keterangan">Urutkan atau sembunyikan kartu di Beranda. Perubahan tersimpan otomatis.</string>
     <string name="atur_selesai">Selesai</string>
     <string name="atur_urungkan">Urungkan</string>
     <string name="atur_standar">Kembalikan standar</string>
@@ -73,6 +69,14 @@
     <string name="teks_besar">Besar</string>
     <string name="profil_animasi">Animasi</string>
     <string name="profil_animasi_ket">Matikan untuk mengurangi gerakan di aplikasi.</string>
-    <string name="profil_belum_tersimpan">Pengaturan tampilan ini belum tersimpan setelah aplikasi ditutup. Penyimpanan permanen hadir di Fase 3.</string>
     <string name="terpilih">Terpilih</string>
+
+    <!-- Profil: nama dan memori -->
+    <string name="profil_nama">Nama panggilan</string>
+    <string name="profil_nama_kosong">Belum diisi</string>
+    <string name="profil_ubah">Ubah</string>
+    <string name="profil_memori">Memori Hanako</string>
+    <string name="profil_memori_aktif">Memori aktif. Kamu bisa melihat, mengubah, dan menghapus isinya.</string>
+    <string name="profil_memori_mati">Memori mati. Hanako tidak memakai ingatan apa pun.</string>
+    <string name="profil_kelola_memori">Kelola memori</string>
 </resources>

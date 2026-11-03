@@ -14,8 +14,11 @@ Checked 2026-11-02 against official pages. "Used" = declared in `libs.versions.t
 | navigation-compose | 2.10.2 (2026-09-23), maintenance mode | AndroidX navigation releases | yes |
 | lifecycle-* | 2.11.0 (2026-06-17); needs AGP >= 9.2, compileSdk 37 | AndroidX lifecycle releases | yes |
 | junit | 4.13.2 | long-standing final 4.x release (not re-checked online) | yes |
-| Room 2.x | 2.8.5 (2026-09-09) | AndroidX Room releases | Phase 3 |
-| Room 3 | 3.0.3 (2026-09-09), `androidx.room3`, breaking | AndroidX Room 3 releases | Phase 3 (decide) |
-| KSP | 2.3.11 seen as latest tag; quickstart uses 2.3.10 | google/ksp releases, kotlinlang.org | Phase 3 |
+| Room 2.x | 2.8.5 (2026-09-09), chosen | AndroidX Room releases | yes |
+| Room 3 | 3.0.3 (2026-09-09), `androidx.room3`, breaking redesign; NOT chosen (cannot be tried without a build) | AndroidX Room 3 releases | no |
+| KSP | 2.3.10 (pairing in the Kotlin quickstart; 2.3.11 seen as a newer tag). AGP 9 built-in Kotlin: sources conflict, see HANDOFF decision 2 | kotlinlang.org, google/ksp issues #2615/#2729 | yes |
+| datastore-preferences | 1.3.0 (2026-10-21) | AndroidX DataStore releases | yes |
+| androidx.test runner / core / ext-junit | 1.7.0 / 1.7.0 / 1.3.0 | AndroidX Test releases | androidTest only |
+| room-testing | 2.8.5 (same as Room) | AndroidX Room releases | androidTest only |
 
-Not yet verified (check in their phase): DataStore, WorkManager, Supabase client, Gemini access path, biometric, speech.
+Not yet verified (check in their phase): WorkManager, Supabase client, Gemini access path, biometric, speech, ML Kit (OCR).

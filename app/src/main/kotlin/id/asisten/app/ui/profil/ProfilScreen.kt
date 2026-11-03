@@ -1,5 +1,6 @@
 package id.asisten.app.ui.profil
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,9 +19,16 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,16 +42,40 @@ import id.asisten.app.domain.pengaturan.Aksen
 import id.asisten.app.domain.pengaturan.ModeTema
 import id.asisten.app.domain.pengaturan.Pengaturan
 import id.asisten.app.domain.pengaturan.UkuranTeks
+import id.asisten.app.domain.profil.NamaPengguna
+import id.asisten.app.ui.komponen.DialogForm
+import id.asisten.app.ui.komponen.FieldTeks
+import id.asisten.app.ui.komponen.TeksGalat
+import id.asisten.app.ui.memori.MemoriScreen
 
 @Composable
 fun ProfilScreen(
     pengaturan: Pengaturan,
+    namaPengguna: String,
+    memoriAktif: Boolean,
     onModeTema: (ModeTema) -> Unit,
     onAksen: (Aksen) -> Unit,
     onUkuranTeks: (UkuranTeks) -> Unit,
     onAnimasi: (Boolean) -> Unit,
+    onSimpanNama: (String) -> Unit,
+    onMemoriAktif: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var tampilMemori by rememberSaveable { mutableStateOf(false) }
+    var ubahNama by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = tampilMemori) { tampilMemori = false }
+
+    if (tampilMemori) {
+        MemoriScreen(
+            memoriAktif = memoriAktif,
+            onMemoriAktif = onMemoriAktif,
+            onKembali = { tampilMemori = false },
+            modifier = modifier,
+        )
+        return
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -56,6 +88,36 @@ fun ProfilScreen(
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.primary,
         )
+
+        Bagian(R.string.profil_nama) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    text = namaPengguna.ifBlank { stringResource(R.string.profil_nama_kosong) },
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { ubahNama = true }) {
+                    Text(stringResource(R.string.profil_ubah))
+                }
+            }
+        }
+
+        Bagian(R.string.profil_memori) {
+            Text(
+                text = stringResource(
+                    if (memoriAktif) R.string.profil_memori_aktif else R.string.profil_memori_mati,
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(onClick = { tampilMemori = true }) {
+                Text(stringResource(R.string.profil_kelola_memori))
+            }
+        }
 
         Bagian(R.string.profil_tema) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -107,12 +169,37 @@ fun ProfilScreen(
                 Switch(checked = pengaturan.animasiAktif, onCheckedChange = onAnimasi)
             }
         }
+    }
 
-        Text(
-            text = stringResource(R.string.profil_belum_tersimpan),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+    if (ubahNama) {
+        DialogUbahNama(
+            awal = namaPengguna,
+            onSimpan = {
+                onSimpanNama(it)
+                ubahNama = false
+            },
+            onBatal = { ubahNama = false },
         )
+    }
+}
+
+@Composable
+private fun DialogUbahNama(awal: String, onSimpan: (String) -> Unit, onBatal: () -> Unit) {
+    var nama by remember { mutableStateOf(awal) }
+    var galat by remember { mutableStateOf<String?>(null) }
+    DialogForm(
+        judul = stringResource(R.string.profil_nama),
+        onBatal = onBatal,
+        onSimpan = {
+            if (NamaPengguna.valid(nama)) onSimpan(nama) else galat = "Nama tidak boleh kosong."
+        },
+    ) {
+        FieldTeks(
+            label = stringResource(R.string.profil_nama),
+            nilai = nama,
+            onUbah = { nama = it.take(NamaPengguna.MAKS) },
+        )
+        TeksGalat(galat)
     }
 }
 

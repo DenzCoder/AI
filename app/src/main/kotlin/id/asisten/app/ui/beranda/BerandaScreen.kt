@@ -17,6 +17,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
@@ -32,19 +33,25 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import id.asisten.app.R
 import id.asisten.app.domain.Sapaan
+import id.asisten.app.domain.aktivitas.FormatAktivitas
+import id.asisten.app.domain.dasbor.RingkasanBeranda
 import id.asisten.app.domain.dasbor.WidgetBeranda
+import id.asisten.app.domain.waktu.NamaHari
+import id.asisten.app.domain.waktu.Waktu
+import id.asisten.app.ui.wadahViewModel
+
+private const val BATAS_JADWAL = 5
 
 @Composable
-fun BerandaScreen(
-    modifier: Modifier = Modifier,
-    viewModel: BerandaViewModel = viewModel(),
-) {
+fun BerandaScreen(modifier: Modifier = Modifier) {
+    val viewModel = wadahViewModel { BerandaViewModel(it.pengaturan, it.jadwal, it.aktivitas) }
     val sapaan by viewModel.sapaan.collectAsStateWithLifecycle()
+    val nama by viewModel.nama.collectAsStateWithLifecycle()
     val riwayat by viewModel.riwayat.collectAsStateWithLifecycle()
     val mengatur by viewModel.mengatur.collectAsStateWithLifecycle()
+    val ringkasan by viewModel.ringkasan.collectAsStateWithLifecycle()
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.segarkan() }
 
@@ -63,6 +70,8 @@ fun BerandaScreen(
     } else {
         Dasbor(
             sapaan = sapaan,
+            nama = nama,
+            ringkasan = ringkasan,
             terlihat = riwayat.sekarang.terlihat,
             onAtur = viewModel::mulaiMengatur,
             modifier = modifier,
@@ -73,10 +82,13 @@ fun BerandaScreen(
 @Composable
 private fun Dasbor(
     sapaan: Sapaan,
+    nama: String,
+    ringkasan: RingkasanBeranda,
     terlihat: List<WidgetBeranda>,
     onAtur: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val salam = stringResource(sapaan.teks())
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(16.dp),
@@ -89,9 +101,10 @@ private fun Dasbor(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = stringResource(sapaan.teks()),
+                    text = if (nama.isBlank()) salam else "$salam, $nama",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = onAtur) {
                     Text(stringResource(R.string.beranda_atur_widget))
@@ -108,7 +121,7 @@ private fun Dasbor(
                 )
             }
         }
-        items(terlihat, key = { it.name }) { widget -> KartuWidget(widget) }
+        items(terlihat, key = { it.name }) { widget -> KartuWidget(widget, ringkasan) }
     }
 }
 
@@ -145,7 +158,7 @@ private fun KartuHanako() {
 }
 
 @Composable
-private fun KartuWidget(widget: WidgetBeranda) {
+private fun KartuWidget(widget: WidgetBeranda, ringkasan: RingkasanBeranda) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -155,13 +168,98 @@ private fun KartuWidget(widget: WidgetBeranda) {
                 text = stringResource(widget.judul()),
                 style = MaterialTheme.typography.titleMedium,
             )
-            Text(
-                text = stringResource(widget.keterangan()),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            IsiWidget(widget, ringkasan)
         }
     }
+}
+
+/** Real data for the four cards that have a module; the rest keep an honest "not available yet" note. */
+@Composable
+private fun IsiWidget(widget: WidgetBeranda, r: RingkasanBeranda) {
+    when (widget) {
+        WidgetBeranda.JADWAL_HARI_INI -> {
+            if (r.jadwalHariIni.isEmpty()) {
+                Keterangan(widget)
+            } else {
+                r.jadwalHariIni.take(BATAS_JADWAL).forEach { blok ->
+                    Text(
+                        text = Waktu.formatJam(blok.mulai) + "  " + blok.judul + if (blok.bentrok) "  (bentrok)" else "",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                if (r.jadwalHariIni.size > BATAS_JADWAL) {
+                    Text(
+                        text = "+${r.jadwalHariIni.size - BATAS_JADWAL} lainnya",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        WidgetBeranda.TUGAS -> {
+            if (r.tugasTerdekat.isEmpty()) {
+                Keterangan(widget)
+            } else {
+                r.tugasTerdekat.forEach { tugas ->
+                    Text(
+                        text = tugas.judul + " – " + FormatAktivitas.tenggat(tugas, r.hariIni),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+
+        WidgetBeranda.SEKOLAH -> {
+            val jam = r.jamSekolahHariIni
+            if (jam == null && r.piketHariIni.isEmpty()) {
+                Keterangan(widget)
+            } else {
+                if (jam != null) {
+                    Text(
+                        text = "Sekolah " + Waktu.rentang(jam.masuk, jam.pulang),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                r.piketHariIni.forEach { piket ->
+                    Text(
+                        text = "Piket " + NamaHari.untuk(piket.hari) + ": " + piket.keterangan,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+
+        WidgetBeranda.TUJUAN -> {
+            if (r.tujuanAktif.isEmpty()) {
+                Keterangan(widget)
+            } else {
+                r.tujuanAktif.forEach { tujuan ->
+                    Text(text = tujuan.judul, style = MaterialTheme.typography.bodyMedium)
+                    LinearProgressIndicator(
+                        progress = { tujuan.kemajuan },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        text = FormatAktivitas.persen(tujuan.kemajuan).toString() + "%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        WidgetBeranda.SHOLAT, WidgetBeranda.KEBIASAAN, WidgetBeranda.KEUANGAN -> Keterangan(widget)
+    }
+}
+
+@Composable
+private fun Keterangan(widget: WidgetBeranda) {
+    Text(
+        text = stringResource(widget.keterangan()),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable

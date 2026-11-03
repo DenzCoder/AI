@@ -22,14 +22,22 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import id.asisten.app.R
+import id.asisten.app.domain.pengaturan.Pengaturan
+import id.asisten.app.domain.profil.ProfilPengguna
+import id.asisten.app.ui.aktivitas.AktivitasScreen
 import id.asisten.app.ui.beranda.BerandaScreen
+import id.asisten.app.ui.jadwal.JadwalScreen
 import id.asisten.app.ui.pengaturan.PengaturanViewModel
 import id.asisten.app.ui.profil.ProfilScreen
 import id.asisten.app.ui.screens.BagianScreen
 
 @Composable
 fun AsistenApp(pengaturanViewModel: PengaturanViewModel) {
-    val pengaturan by pengaturanViewModel.pengaturan.collectAsStateWithLifecycle()
+    val pengaturanTersimpan by pengaturanViewModel.pengaturan.collectAsStateWithLifecycle()
+    val profilTersimpan by pengaturanViewModel.profil.collectAsStateWithLifecycle()
+    val pengaturan = pengaturanTersimpan ?: Pengaturan()
+    val profil = profilTersimpan ?: ProfilPengguna()
+
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -68,22 +76,22 @@ fun AsistenApp(pengaturanViewModel: PengaturanViewModel) {
             popExitTransition = { if (animasi) fadeOut() else ExitTransition.None },
         ) {
             composable(AsistenDestination.BERANDA.route) { BerandaScreen() }
-            composable(AsistenDestination.JADWAL.route) {
-                BagianScreen(R.string.jadwal_judul, R.string.jadwal_keterangan)
-            }
-            composable(AsistenDestination.AKTIVITAS.route) {
-                BagianScreen(R.string.aktivitas_judul, R.string.aktivitas_keterangan)
-            }
+            composable(AsistenDestination.JADWAL.route) { JadwalScreen() }
+            composable(AsistenDestination.AKTIVITAS.route) { AktivitasScreen() }
             composable(AsistenDestination.HANAKO.route) {
                 BagianScreen(R.string.hanako_judul, R.string.hanako_keterangan)
             }
             composable(AsistenDestination.PROFIL.route) {
                 ProfilScreen(
                     pengaturan = pengaturan,
+                    namaPengguna = profil.nama,
+                    memoriAktif = profil.memoriAktif,
                     onModeTema = pengaturanViewModel::ubahModeTema,
                     onAksen = pengaturanViewModel::ubahAksen,
                     onUkuranTeks = pengaturanViewModel::ubahUkuranTeks,
                     onAnimasi = pengaturanViewModel::ubahAnimasi,
+                    onSimpanNama = pengaturanViewModel::simpanNama,
+                    onMemoriAktif = pengaturanViewModel::ubahMemoriAktif,
                 )
             }
         }
