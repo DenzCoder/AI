@@ -11,6 +11,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -31,8 +32,16 @@ import id.asisten.app.ui.pengaturan.PengaturanViewModel
 import id.asisten.app.ui.profil.ProfilScreen
 import id.asisten.app.ui.screens.BagianScreen
 
+/**
+ * [tujuanBuka] is the route of a tab requested from outside (a notification). The app navigates there once and
+ * then calls [onTujuanDipakai] so a screen rotation or recomposition does not repeat it.
+ */
 @Composable
-fun AsistenApp(pengaturanViewModel: PengaturanViewModel) {
+fun AsistenApp(
+    pengaturanViewModel: PengaturanViewModel,
+    tujuanBuka: String? = null,
+    onTujuanDipakai: () -> Unit = {},
+) {
     val pengaturanTersimpan by pengaturanViewModel.pengaturan.collectAsStateWithLifecycle()
     val profilTersimpan by pengaturanViewModel.profil.collectAsStateWithLifecycle()
     val pengaturan = pengaturanTersimpan ?: Pengaturan()
@@ -42,6 +51,20 @@ fun AsistenApp(pengaturanViewModel: PengaturanViewModel) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val animasi = pengaturan.animasiAktif
+
+    LaunchedEffect(tujuanBuka) {
+        if (tujuanBuka != null) {
+            val tujuan = AsistenDestination.entries.firstOrNull { it.route == tujuanBuka }
+            if (tujuan != null) {
+                navController.navigate(tujuan.route) {
+                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+            onTujuanDipakai()
+        }
+    }
 
     Scaffold(
         bottomBar = {

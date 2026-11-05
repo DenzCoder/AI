@@ -21,7 +21,6 @@
     <string name="status_pengembangan">Bagian ini masih dalam pengembangan.</string>
 
     <!-- Kartu Hanako -->
-    <string name="hanako_ilustrasi_desc">Ilustrasi Hanako</string>
     <string name="hanako_kartu_judul">Hai, aku Hanako.</string>
     <string name="hanako_kartu_isi">Aku akan membantumu mengatur hari setelah fitur-fiturnya selesai dibuat.</string>
 
@@ -78,5 +77,8 @@
     <string name="profil_memori">Memori Hanako</string>
     <string name="profil_memori_aktif">Memori aktif. Kamu bisa melihat, mengubah, dan menghapus isinya.</string>
     <string name="profil_memori_mati">Memori mati. Hanako tidak memakai ingatan apa pun.</string>
+    <string name="profil_pengingat">Pengingat dan mode</string>
+    <string name="profil_pengingat_ket">Atur kapan Hanako mengingatkan, jam tenang, serta mode Fokus dan Istirahat.</string>
+    <string name="profil_kelola_pengingat">Atur pengingat</string>
     <string name="profil_kelola_memori">Kelola memori</string>
 </resources>

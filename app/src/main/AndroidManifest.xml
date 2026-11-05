@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Phase 1 requests no permissions. Permissions are added only by the phase that needs them. -->
+    <!-- Permissions are added only by the phase that needs them. Phase 5 (reminders):
+         - POST_NOTIFICATIONS: Android 13+ only; the app asks at runtime from the Pengingat screen, never on Android 11.
+         - SCHEDULE_EXACT_ALARM: Android 12+ only, so reminders ring on time. If the user denies it the app
+           falls back to inexact alarms and says so on the Pengingat screen. (Not needed on Android 11.)
+         - RECEIVE_BOOT_COMPLETED: re-arm the alarm after the phone restarts. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".AsistenAplikasi"
@@ -15,11 +22,31 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Internal receivers are not exported: only this app (and the system, for system broadcasts) can reach them. -->
+        <receiver
+            android:name=".notifikasi.PenerimaAlarm"
+            android:exported="false" />
+        <receiver
+            android:name=".notifikasi.PenerimaTindakan"
+            android:exported="false" />
+        <receiver
+            android:name=".notifikasi.PenerimaSistem"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

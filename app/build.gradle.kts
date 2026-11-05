@@ -47,8 +47,8 @@ android {
     // by default, so no explicit sourceSets block is needed.
 }
 
-// Room exports its schema JSON here. Commit app/schemas/ after the first successful build;
-// SkemaMigrasiTest compares the hand-written migration SQL against it.
+// Room exports its schema JSON here. Commit app/schemas/ after the first successful build:
+// future migrations are checked against it.
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.work.runtime)
 
     testImplementation(libs.junit)
 

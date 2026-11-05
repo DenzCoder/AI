@@ -1,96 +1,109 @@
-# HANDOFF — after Phases 3 and 4 (Local Database; Schedule and Activities)
+# HANDOFF — after Phase 5 (Alarm and Notifications) and the Hanako character
 
-Last updated: 2026-11-03
+Last updated: 2026-11-05
 
 ## Status in one line
-Phases 1–4 source code is written. The **domain logic is verified** (109 JVM unit tests pass). The **Android build has never run** (Gradle, KSP/Room, Compose, DataStore, instrumented tests, device): the authoring sandbox cannot reach Gradle/Maven. Do not start Phase 5 until the GitHub Actions build is green and the debug APK has been tried on the phone.
+Phases 1–5 source code is written. The **pure logic is verified** (179 JVM unit tests pass) and the static checks are clean. The **Android build has never run** (Gradle, KSP/Room, Compose, DataStore, WorkManager, instrumented tests, device): the authoring sandbox cannot reach Gradle/Maven. **Phase 5 behavior (alarms on time, reboot recovery, notification buttons, silent vs sound) has never been seen on a device.** Do not start Phase 6 until the GitHub Actions build is green and the checklist in "Exact next steps" has been tried on the phone.
 
 ## How the code came to be (read this)
-Part of Phase 3/4 (domain, data layer, repositories, ViewModels, most unit tests, `tools/jvm-check.sh`) was written in an earlier working session whose conversation was not available to the session that finished the phases. While finishing, five files from that earlier work were accidentally overwritten and then reconstructed from the code and tests that use them:
-- `domain/memori/Memori.kt` (rebuilt to the API its callers and tests need: `ItemMemori`, `KategoriMemori`, `KonteksAi.pilih`, `ValidasiMemori`; the `MAKS` limit of 500 is a re-chosen value).
-- `domain/dasbor/TataLetakCodec.kt` (rebuilt; passes the 8 existing codec tests; the stored text format may differ from the lost original, which is harmless because no build was ever installed).
-- `gradle/libs.versions.toml`, `build.gradle.kts`, `app/build.gradle.kts` (rewritten; versions below were re-verified against official pages).
-- `Pengaturan.kt` was restored to its committed state.
-After the repair, `tools/jvm-check.sh` passes all 109 tests, so the reconstruction is consistent with the rest of the code.
+Part of Phases 3/4 (domain, data layer, repositories, ViewModels, most unit tests, `tools/jvm-check.sh`) was written in an earlier working session whose conversation was not available to the session that finished them. Five files from that earlier work were accidentally overwritten and then reconstructed (`domain/memori/Memori.kt`, `domain/dasbor/TataLetakCodec.kt`, the three Gradle files); `Pengaturan.kt` was restored from git. Details were in the Phase 3/4 handoff; after the repair all tests passed, so the reconstruction is consistent. Phase 5 and the Hanako work were written in one session and did not touch those files except to add to the Gradle files and to `PengaturanRepository.kt`.
 
 ## Completed work
 
-### Phase 3 — Local database
-- **Room** database `asisten.db`, **version 1**, `exportSchema = true`. Entities: `memori`, `kegiatan`, `jam_sekolah`, `pelajaran`, `piket`, `tugas`, `tujuan`, `tonggak` (FK to `tujuan`, ON DELETE CASCADE). Conventions: dates are epoch days, times are minutes since midnight, weekdays ISO 1..7, enums stored by name; conversion lives in `data/db/Pemetaan.kt` (unit-tested, unknown stored values fall back safely).
-- **DataStore (Preferences)**: appearance settings, user profile (name, onboarding done, memory on/off) and the dashboard layout with its undo history (`TataLetakCodec`). Updates are read-modify-write inside one `edit {}`.
-- **Repositories** expose domain models only; **hand-written container** `WadahAplikasi` (no DI framework); `wadahViewModel { }` helper creates ViewModels.
-- **Migration policy**: version 1 is the first schema (all Phase 3 and Phase 4 tables); no build was installed before it. `fallbackToDestructiveMigration` is deliberately NOT used. Any later entity change needs a version bump, a real `Migration`, and the new schema JSON.
-- **Persistence now real**: theme, accent, text size, animation toggle, name, onboarding state, memory switch and widget arrangement (with undo) survive restarts.
-- **Onboarding** (5 steps): welcome, preferred name (required), theme/accent, privacy and memory (memory is **opt-in, off by default**), pointer to school setup. No account needed.
-- **Memori Hanako screen** (Profil → Kelola memori): view by the 4 categories, add, edit, delete (with confirmation), delete all, mark sensitive, switch memory off. `KonteksAi.pilih` returns nothing when memory is off and leaves out sensitive items unless explicitly requested (for Phase 6).
+### Phase 5 — Alarms and notifications
+- **Pure logic** (`domain/pengingat/`, tested): `PenghitungPengingat` lists the reminders that fire in a time window; `ProsesPengingat` decides what is due now and when the next alarm is; `KebijakanNotifikasi` decides sound or silent; `PenyusunNotifikasi` builds the Indonesian text from CURRENT data (a deleted, completed or moved item yields nothing, so an old alarm or snooze can never announce something stale); `TundaCodec` stores snoozes; `PengaturanPengingat` holds the settings and clamps bad stored values.
+- **What is reminded**: activities (one-time and weekly) N minutes before the start; open tasks/exams with a due date at a time of day the day before and on the due day; school entry N minutes before on weekdays that have school hours, including that day's duty roster.
+- **How it is scheduled** (`notifikasi/`): ONE exact `AlarmManager` alarm for the next reminder only. When it fires, or the app starts, or the device restarts, or the periodic worker runs, `PenjadwalPengingat.proses` delivers what became due, moves a "handled up to" marker (stored in DataStore) forward and arms the next alarm. A mutex serializes everything, so the same reminder cannot be delivered twice. If the exact-alarm permission is missing the app uses `setAndAllowWhileIdle` (may be late by minutes, never dropped) and says so in the UI.
+- **Re-arming**: after restart, app update, clock or time-zone change, and exact-alarm permission change (`PenerimaSistem`). After a restart, update or permission change reminders that came due in the last 2 hours are delivered late; older ones are dropped. After a clock or time-zone change nothing is delivered, only re-armed. A WorkManager periodic job (3 h, plain `Worker`) is a safety net for alarms that a vendor's battery manager killed.
+- **Editing data never pops stale reminders**: edits (an observer in `WadahAplikasi`, debounced 400 ms) re-arm the alarm without delivering, so an activity created 5 minutes before it starts does not fire an immediate "10 minutes before" notification.
+- **Notifications**: channels "Pengingat" (HIGH, sound and vibration) and "Pengingat senyap" (LOW). Buttons: Selesai (tasks only; marks the task done), Tunda (default 10 min, snooze survives restarts), Buka (opens the Jadwal or Aktivitas tab; `MainActivity` is `singleTop`). Each notification has its own PendingIntents (unique data URI) so two notifications never overwrite each other's buttons.
+- **Modes** (`PengaturanPengingat`): quiet hours (default off, 22:00–06:00, crosses midnight): reminders still appear, silently. Fokus (25–90 min): only Tinggi-priority reminders make sound. Istirahat (15–120 min): everything silent. Modes expire by themselves; the policy checks the clock at delivery time, nothing needs to be scheduled to end a mode.
+- **Permissions**: manifest declares `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED`. The notification permission is requested **only on Android 13+, only when notifications are off, only from Profil -> Atur pengingat**; on Android 11 nothing is requested. Exact alarms need no permission on Android 11. `USE_EXACT_ALARM` is deliberately not declared. The screen links to the right system pages (notification settings, exact-alarm page on Android 12+, battery optimization).
+- **UI**: Profil -> "Atur pengingat" -> screen with Hanako's mood card, permission status, all settings, mode buttons, the **next real reminders** (computed by the same logic the alarm uses: the quickest way to see that scheduling works) and a **test notification** button that goes through the real channels and tells why it was silent.
 
-### Phase 4 — Schedule and activities
-- **Jadwal tab**: *Kalender* (day / week / month views; navigation; month grid with dots; tap a day to open it), activity form (one-time or weekly, priority, notes), **conflict detection** (also against the school timetable; breaks never conflict) with an **earliest free slot suggestion** and a "use this slot" button; *Sekolah* (entry/dismissal hours per weekday, subject timetable with teacher/room and break slots, duty roster).
-- **Aktivitas tab**: *Tugas* (tasks, homework and exams with due-date status, priority, filter, complete/undo), *Tujuan* (short/long-term goals, milestones, progress bar, mark achieved), *Riwayat* (completed tasks and achieved goals, undo).
-- **Beranda** now shows real data on 4 cards (today's schedule, nearest tasks, school hours + duty, active goals); the other 3 cards (prayer, habits, money) still say honestly that the feature is not available yet.
-- All forms validate input (`domain/formulir`) and show Indonesian error messages; school data is never pre-filled.
+### Hanako character
+- The user's character sheet is kept at `docs/referensi/hanako-lembar-karakter.png` (1536x1024). `tools/potong-hanako.py` cuts the 12 face expressions (normal, senyum, tertawa, malu, sedih, marah, bingung, terkejut, cemberut, mengantuk, berpikir, panik) into `app/src/main/res/drawable-nodpi/hanako_*.webp` (112 KB total). Coordinates are relative to a 1536x1024 sheet and scaled to the real file size, so a higher-resolution version of the same sheet can be dropped in and the script re-run for sharper images.
+- `domain/hanako/EkspresiHanako.kt` (enum + `PilihEkspresi`, tested) and `ui/hanako/HanakoAvatar.kt`. The Beranda card shows Hanako with an expression that follows the time of day (sleepy 22:00–03:59); onboarding changes expression per step; the Pengingat screen shows her mood (confused when notifications are blocked, thinking in Fokus, sleepy in Istirahat).
+- The earlier temporary vector illustration was deleted.
+- **Limit**: the faces are only about 123 px wide, so they get blurry above roughly 100 dp. Not cut yet (coordinates are in the script comment): chibi, 7 gestures, 6 motion poses, front/side/back poses. Use them in Phase 6 (chat moods) and Phase 7 (voice).
 
-## Current project structure (new or changed since Phase 2)
+### Earlier phases (unchanged)
+Phases 1–4: Room v1 (all tables), DataStore settings/profile/layout, onboarding, Memori Hanako, Jadwal (day/week/month, conflicts, school hours/timetable/duty), Aktivitas (tasks, goals, milestones, history), dashboard cards with real data. See CHANGELOG.md.
+
+## Current project structure (new or changed in Phase 5)
 ```
 app/src/main/kotlin/id/asisten/app/
-  AsistenAplikasi.kt                         WadahAplikasi container + Application
-  MainActivity.kt *                          loads settings/profile -> onboarding or app
-  domain/{Enums,Label,Prioritas}.kt          keEnum(), Indonesian labels, Prioritas
-  domain/{jadwal,aktivitas,formulir,waktu,memori,profil}/   pure logic (JVM-testable)
-  domain/dasbor/{RingkasanBeranda,TataLetakCodec}.kt
-  data/db/{Entitas,Dao,Pemetaan,AsistenDatabase}.kt
-  data/pengaturan/PengaturanRepository.kt    DataStore
-  data/repo/Repository.kt                    Memori/Jadwal/Aktivitas repositories
-  ui/WadahViewModel.kt  ui/komponen/Komponen.kt
-  ui/{beranda,jadwal,sekolah,aktivitas,memori,onboarding,profil,pengaturan,navigation}/
-app/src/test/...            11 JVM test classes (109 tests)
-app/src/androidTest/...     data/db/AsistenDatabaseTest.kt (5 instrumented tests, NOT run)
-app/schemas/                empty until the first build (see next steps)
-tools/jvm-check.sh, tools/stubs/   JVM-only logic check (Kotlin 2.0.21 from Gradle's lib dir)
+  AsistenAplikasi.kt *              container + mulaiPengingat() (channels, worker, startup catch-up, edit observer)
+  MainActivity.kt *                 opens the tab requested by a notification (singleTop + onNewIntent)
+  domain/pengingat/                 Pengingat, PengaturanPengingat, Kebijakan, PenghitungPengingat(+ProsesPengingat),
+                                    PenyusunNotifikasi, LabelPengingat   (pure, tested)
+  domain/hanako/EkspresiHanako.kt   expressions + choice rules (pure, tested)
+  notifikasi/                       PenampilNotifikasi, PenjadwalPengingat, Penerima (3 receivers), PekerjaPengaman,
+                                    CekIzin, KunciIntent
+  data/pengaturan/PengaturanRepository.kt *   + reminder keys, `pengingat`, `keadaanPengingat`
+  ui/pengingat/                     PengingatScreen, PengingatViewModel
+  ui/hanako/HanakoAvatar.kt
+  ui/{beranda,onboarding,profil,navigation}/ *   Hanako avatar, entry to Pengingat, tab from notification
+app/src/main/res/drawable/ic_notifikasi.xml      bell icon;  drawable-nodpi/hanako_*.webp
+tools/jvm-check.sh  tools/cek-statis.py  tools/potong-hanako.py
+docs/referensi/hanako-lembar-karakter.png
 ```
 
 ## Important technical decisions
-1. **Room 2.8.5** (not Room 3.0.3): Room 3 is a breaking redesign (new `androidx.room3` package, `SQLiteDriver`, all-suspend DAOs) and cannot be tried here, so the lower-risk, better-documented line was chosen. Revisit only with a working build.
-2. **KSP 2.3.10** (pairing shown in the Kotlin docs). Reports about KSP with AGP 9 "built-in Kotlin" conflict: one source says `android.disallowKotlinSourceSets=false` is required, another says KSP 2.3.6+ works without flags. No workaround flag is set. **If CI fails with "Using kotlin.sourceSets DSL to add Kotlin sources is not allowed with built-in Kotlin", add `android.disallowKotlinSourceSets=false` to `gradle.properties`** (documented KSP workaround).
-3. **DataStore 1.3.0** for small key-value data; Room for structured records.
-4. Explicit `sourceSets` block removed from `app/build.gradle.kts` (AGP's built-in Kotlin already includes `src/main/kotlin`; the block was an AGP 9 DSL risk).
-5. Memory is **opt-in**: the onboarding switch defaults to off. (`ProfilPengguna.memoriAktif` defaults to true only before onboarding finishes; onboarding always writes an explicit value.)
-6. Recurrence is weekly only, and editing/deleting a weekly activity affects every week (no per-day exceptions yet).
-7. Mixed string style: Phase 1–2 screens use `strings.xml`; Phase 3–4 screens use Indonesian literals via shared components (`Label.kt`, `Komponen.kt`). Move to resources before any localization work.
+1–7 as in earlier handoffs (Room 2.8.5 not Room 3; KSP 2.3.10 with the `android.disallowKotlinSourceSets=false` workaround if CI complains; DataStore for small data; no explicit `sourceSets`; opt-in memory; weekly-only recurrence; mixed string style).
+8. **One alarm, not one per reminder.** Simpler to keep correct (nothing to cancel when data changes) and cheap on battery; the cost is that everything depends on re-arming after each event, which is what `proses` does.
+9. **Watermark + grace window instead of "fire exactly once" flags.** A marker in DataStore says what was handled; reminders older than 2 hours are dropped rather than delivered late. A marker of 0 (fresh install / cleared data) delivers nothing.
+10. **Quiet hours and modes silence, never drop.** A reminder is always shown; only sound and vibration change (two channels).
+11. **Reminder text is rebuilt from current data at delivery time**, and identified by (kind, id, occurrence instant), so changed or deleted items cannot produce stale notifications.
+12. **Plain `Worker` + `runBlocking`** for WorkManager: no ktx/coroutine-worker artifact to get wrong.
+13. **No new Room table for snoozes**: they live in DataStore, so the Room schema is still version 1.
+14. **No holiday calendar**: school reminders also fire on holidays; this is stated on the screen.
 
 ## Tests performed and their REAL results
-- `tools/jvm-check.sh`: compiles 19 domain files plus the entity/mapper files against Room annotation stubs, and 11 test files, with Kotlin 2.0.21, then runs JUnit. **Result: OK (109 tests).** This proves the domain logic, form validation, entity mapping and layout codec. It does NOT cover Android, Compose, Room, DataStore or the project's real Kotlin version.
-- Static checks (Python script): all 9 XML resources are well-formed; every `R.string`/`@string` and drawable reference resolves; brackets balance and `package` matches the directory in all 57 Kotlin files; every internal `import id.asisten.app.*` resolves to a declared symbol (the generated `R` class is excluded: it only exists after a build). These cannot detect type errors or API misuse.
-- **Not run**: `./gradlew` (blocked: services.gradle.org / Maven hosts return 403 in the sandbox), KSP/Room annotation processing, Compose compilation, `AsistenDatabaseTest` (needs an emulator), lint, any on-device test. **No APK exists.**
+- `tools/jvm-check.sh`: compiles 26 domain files plus the entity/mapper files against Room annotation stubs, and 17 test files, with Kotlin 2.0.21, then runs JUnit. **Result: OK (179 tests)**: 109 from Phases 1–4, 59 for reminder logic (window math, midnight crossing, weekly recurrence, task/school reminders, catch-up window, clock moved back, dedupe, snooze, quiet hours, Fokus/Istirahat rules, text for every case, codecs), 5 for Hanako expressions, 6 for screen labels.
+- **Sanity check of the tests themselves**: four logic bugs were introduced on purpose in a scratch copy (quiet-hours wrap, "never ran" guard, window boundary, completed-task filter); the suite failed 6 tests, i.e. it detects them.
+- `tools/cek-statis.py` (new, also run first in CI): XML well-formed, every `R.string`/`R.drawable`/`@string`/`@drawable` resolves, brackets balance and `package` matches the folder in all 80 Kotlin files, internal imports resolve, manifest classes exist, every Hanako expression has an image and a mapping. **Result: clean.** It was verified against 5 deliberately introduced problems (all reported). It cannot find type errors or API misuse.
+- **Not run**: `./gradlew` (the sandbox gets 403 from services.gradle.org / Maven hosts), KSP/Room processing, Compose compilation, WorkManager, `AsistenDatabaseTest`, lint, **any on-device test**. **No APK exists.**
 
 ## Known issues, risks and gaps
 Unverified compile risks (most likely first):
-- KSP + AGP 9 built-in Kotlin (see decision 2); Room schema export path `app/schemas`.
-- Compose API details: `TabRow`/`Tab` (may be deprecated, not removed), `LinearProgressIndicator(progress = { })`, `SystemBarStyle.auto` in `MainActivity`, `clickable(role = …)`, `Density(...)` in the theme, `LifecycleEventEffect`, NavHost transition lambdas.
+- KSP + AGP 9 built-in Kotlin (decision 2).
+- Compose/Android API details written without a compiler: `LifecycleEventEffect`, `rememberLauncherForActivityResult(RequestPermission)`, `mutableLongStateOf`, `TabRow`/`Tab`, `LinearProgressIndicator(progress = { })`, `SystemBarStyle.auto`, NavHost transitions.
+- Phase 5 platform APIs: `Notification.Builder` + `Notification.Action.Builder(Icon, …)`, `PendingIntent` flags, trailing commas in `when` conditions in `PenerimaSistem`, `PeriodicWorkRequest.Builder(Class, Long, TimeUnit)`, `AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED` constant, `Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM`.
+- WorkManager 2.12.0: its minimum compileSdk/AGP was not re-checked.
 - `wadahViewModel` (inline composable with `crossinline`) and smart-casts in `MainActivity`'s `when`.
 
+Behavior risks to watch on the realme Narzo 50i Prime (ColorOS kills background apps aggressively):
+- If alarms are late or missing, the user must allow background activity and disable battery optimization (the screen explains this and links to the page). The WorkManager net only helps when the system lets it run.
+- Force-stopping the app cancels its alarms until the app is opened again; on the next start the last 2 hours of missed reminders are delivered.
+
 Gaps against the master prompt (not hidden):
-- **School supply checklist**: no table or UI yet.
-- **OCR schedule import** (and entry via Hanako chat/voice): later phases (OCR needs ML Kit or Gemini vision; chat/voice are Phases 6–7).
-- **"Rapikan jadwal"**: only a free-slot suggestion on conflict exists; no bulk reschedule.
-- **Memory**: items are all user-typed; no "guess/prediction" status or automatic learning yet. That needs new columns, so it requires **a Room version bump with a real migration in Phase 9** (v1 may be installed by then).
-- Reminders, alarms, notifications, quiet hours: Phase 5. Prayer, habits, money, study, wellness, journal: Phase 8. Gemini/Supabase: Phases 6 and 9.
-- Persistence of the layout "restore previous arrangements" is the capped (20) undo history plus reset to default; there is no named-snapshot picker.
-- `AsistenDatabaseTest` was never executed.
+- Holiday calendar for school reminders; per-day exceptions for weekly activities.
+- Android 13+ has no prompt outside the Pengingat screen (the target phone is Android 11).
+- School supply checklist, OCR import, bulk reschedule, memory prediction status (see earlier handoff; the last needs a Room migration in Phase 9).
+- Hanako: only faces are used; gestures, motion poses, chibi and higher-resolution images are still to do.
+- Prayer, habits, money, study, wellness, journal: Phase 8. Gemini/Supabase: Phases 6 and 9.
 
 ## Exact next steps
 1. Create a (private) GitHub repo; in Termux: `git remote add origin <url>` then `git push -u origin main`.
-2. Actions → run **Build ASISTEN**. If it fails, paste the full failing log into the next session; fix compile errors first, add no features.
-3. When green: download the **room-schemas** artifact and commit its contents into `app/schemas/` (needed for future migration checks); download `asisten-debug-apk` and install it on the realme Narzo 50i Prime.
-4. On the phone check: onboarding (name required, memory switch defaults to off); theme/accent/text size/animation persist after force-closing the app; Atur widget order persists; Profil → Kelola memori (add/edit/delete); Jadwal → add a one-time and a weekly activity, create a conflict and see the warning and slot suggestion, switch day/week/month; Sekolah → add hours, a lesson, a break, a duty; Aktivitas → add a PR with a due date, complete it, find it in Riwayat, add a goal with milestones; Beranda cards show that data.
-5. Optionally run `./gradlew connectedDebugAndroidTest` (emulator needed) for `AsistenDatabaseTest`.
-6. Then start Phase 5 (alarms and notifications): `AlarmManager`/`WorkManager`, channels, actions Selesai/Tunda/Buka, reboot recovery, quiet hours, Focus/Rest modes. Do not request the Android 13 notification permission on Android 11; handle exact-alarm access correctly.
+2. Actions -> run **Build ASISTEN**. If it fails, paste the full failing log into the next session; fix compile errors first, add no features.
+3. When green: download **room-schemas** and commit it into `app/schemas/`; download `asisten-debug-apk` and install it on the phone.
+4. Phone checklist, Phases 3–4 (see the previous handoff list: onboarding, persistence, Memori, Jadwal, Sekolah, Aktivitas).
+5. Phone checklist, **Phase 5**:
+   a. Profil -> Atur pengingat: the Hanako card appears with a face; permission status is correct.
+   b. Tap **Kirim notifikasi uji**: it appears with sound; start Istirahat 15 min and test again: it must appear silently and the message must say why.
+   c. Add an activity 12 minutes from now (reminder 10 min before): "Pengingat berikutnya" lists it; wait: it must ring at the right minute. Test Tunda (comes back after the snooze time) and Buka (opens Jadwal).
+   d. Add a task due tomorrow: both reminders are listed; mark it Selesai from the notification: it moves to Riwayat and disappears from the list.
+   e. Restart the phone with a reminder pending: it must still ring (reboot recovery).
+   f. Turn on quiet hours around the current time: the reminder shows without sound.
+   g. Note anything late or missing and the battery settings used.
+6. Then Phase 6 (Hanako AI chat with Gemini): use the other expressions per message mood; cut the gestures/chibi if wanted. Do not request the Android 13 notification permission on Android 11.
 
 ## Continuation prompt (paste into the next session)
 ```
 Lanjutkan proyek ASISTEN dari HANDOFF.md terbaru (jangan mulai ulang, jangan minta saya mengulang persyaratan).
-Status: kode Fase 1–4 sudah ditulis; logika domain terverifikasi (109 tes JVM lolos lewat tools/jvm-check.sh), tetapi build Android belum pernah dijalankan.
-Hasil GitHub Actions saya: <tempel log error, atau tulis "hijau, APK terpasang, semua pemeriksaan di langkah 4 berhasil" / sebutkan yang gagal>.
+Status: kode Fase 1–5 sudah ditulis; logika murni terverifikasi (179 tes JVM lolos lewat tools/jvm-check.sh, pemeriksa statis tools/cek-statis.py bersih), tetapi build Android dan perilaku alarm/notifikasi di HP belum pernah dijalankan.
+Hasil GitHub Actions saya: <tempel log error, atau tulis "hijau, APK terpasang, semua pemeriksaan di langkah 4 dan 5 berhasil" / sebutkan yang gagal, termasuk pengingat yang terlambat atau tidak muncul>.
 Jika ada error: perbaiki penyebabnya secara minimal dan jelaskan, tanpa menambah fitur baru. Jika error KSP "kotlin.sourceSets DSL", tambahkan android.disallowKotlinSourceSets=false.
-Jika hijau: kerjakan Fase 5 (Alarm dan Notifikasi) sesuai master prompt, lalu perbarui PROGRESS.md, HANDOFF.md, CHANGELOG.md dengan hasil tes yang nyata.
+Jika hijau: kerjakan Fase 6 (Hanako AI) sesuai master prompt, pakai ekspresi dari lembar karakter (docs/referensi), lalu perbarui PROGRESS.md, HANDOFF.md, CHANGELOG.md dengan hasil tes yang nyata.
 ```

@@ -1,13 +1,11 @@
 package id.asisten.app.ui.beranda
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -25,9 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -38,9 +36,12 @@ import id.asisten.app.domain.Sapaan
 import id.asisten.app.domain.aktivitas.FormatAktivitas
 import id.asisten.app.domain.dasbor.RingkasanBeranda
 import id.asisten.app.domain.dasbor.WidgetBeranda
+import id.asisten.app.domain.hanako.PilihEkspresi
 import id.asisten.app.domain.waktu.NamaHari
 import id.asisten.app.domain.waktu.Waktu
+import id.asisten.app.ui.hanako.HanakoAvatar
 import id.asisten.app.ui.wadahViewModel
+import java.time.LocalTime
 
 private const val BATAS_JADWAL = 5
 
@@ -127,6 +128,8 @@ private fun Dasbor(
 
 @Composable
 private fun KartuHanako() {
+    // The expression follows the time of day; it is chosen once when the card first appears.
+    val ekspresi = remember { PilihEkspresi.untukWaktu(LocalTime.now()) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
@@ -136,11 +139,7 @@ private fun KartuHanako() {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Image(
-                painter = painterResource(R.drawable.hanako_ilustrasi),
-                contentDescription = stringResource(R.string.hanako_ilustrasi_desc),
-                modifier = Modifier.size(72.dp),
-            )
+            HanakoAvatar(ekspresi = ekspresi, lebar = 72.dp)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = stringResource(R.string.hanako_kartu_judul),

@@ -47,6 +47,7 @@ import id.asisten.app.ui.komponen.DialogForm
 import id.asisten.app.ui.komponen.FieldTeks
 import id.asisten.app.ui.komponen.TeksGalat
 import id.asisten.app.ui.memori.MemoriScreen
+import id.asisten.app.ui.pengingat.PengingatScreen
 
 @Composable
 fun ProfilScreen(
@@ -62,9 +63,16 @@ fun ProfilScreen(
     modifier: Modifier = Modifier,
 ) {
     var tampilMemori by rememberSaveable { mutableStateOf(false) }
+    var tampilPengingat by rememberSaveable { mutableStateOf(false) }
     var ubahNama by remember { mutableStateOf(false) }
 
     BackHandler(enabled = tampilMemori) { tampilMemori = false }
+    BackHandler(enabled = tampilPengingat) { tampilPengingat = false }
+
+    if (tampilPengingat) {
+        PengingatScreen(onKembali = { tampilPengingat = false }, modifier = modifier)
+        return
+    }
 
     if (tampilMemori) {
         MemoriScreen(
@@ -116,6 +124,17 @@ fun ProfilScreen(
             )
             OutlinedButton(onClick = { tampilMemori = true }) {
                 Text(stringResource(R.string.profil_kelola_memori))
+            }
+        }
+
+        Bagian(R.string.profil_pengingat) {
+            Text(
+                text = stringResource(R.string.profil_pengingat_ket),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(onClick = { tampilPengingat = true }) {
+                Text(stringResource(R.string.profil_kelola_pengingat))
             }
         }
 

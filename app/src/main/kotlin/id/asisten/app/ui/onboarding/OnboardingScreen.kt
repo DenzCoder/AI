@@ -1,6 +1,5 @@
 package id.asisten.app.ui.onboarding
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -23,13 +21,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import id.asisten.app.R
+import id.asisten.app.domain.hanako.EkspresiHanako
 import id.asisten.app.domain.pengaturan.Aksen
 import id.asisten.app.domain.pengaturan.ModeTema
 import id.asisten.app.domain.pengaturan.Pengaturan
 import id.asisten.app.domain.profil.NamaPengguna
+import id.asisten.app.ui.hanako.HanakoAvatar
 import id.asisten.app.ui.komponen.BarisPilihan
 import id.asisten.app.ui.komponen.FieldTeks
 import id.asisten.app.ui.komponen.JudulBagian
@@ -64,10 +62,14 @@ fun OnboardingScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Image(
-            painter = painterResource(R.drawable.hanako_ilustrasi),
-            contentDescription = "Ilustrasi Hanako",
-            modifier = Modifier.size(120.dp),
+        HanakoAvatar(
+            ekspresi = when (langkah) {
+                0 -> EkspresiHanako.SENYUM
+                JUMLAH_LANGKAH - 1 -> EkspresiHanako.TERTAWA
+                3 -> EkspresiHanako.BERPIKIR
+                else -> EkspresiHanako.NORMAL
+            },
+            lebar = 96.dp,
         )
         Text(
             text = "Langkah ${langkah + 1} dari $JUMLAH_LANGKAH",

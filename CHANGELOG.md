@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## [Unreleased] — Phase 5: Alarm and Notifications; Hanako character (2026-11-05)
+### Added
+- Reminders for activities (one-time and weekly), tasks and exams (day before and due day) and school entry (with the day's duty roster), computed by pure, unit-tested logic.
+- One exact `AlarmManager` alarm for the next reminder (inexact fallback when exact alarms are not allowed), a 3-hourly WorkManager safety net, and re-arming after restart, app update, clock/time-zone change and exact-alarm permission change.
+- Notification channels "Pengingat" (sound) and "Pengingat senyap" (silent); actions Selesai (tasks only), Tunda and Buka; tapping opens the Jadwal or Aktivitas tab.
+- Quiet hours (silent, never dropped), Fokus mode (only high-priority reminders make sound) and Istirahat mode (all silent), both timed.
+- Profil -> Pengingat dan mode screen: permission status with buttons to the right system pages, all settings, the next real reminders, and a test notification.
+- Hanako character: 12 expressions cut from the user's character sheet; shown on the Beranda card and in onboarding; the Pengingat screen shows her mood.
+- `tools/cek-statis.py` (saved static checks, also run in CI), `tools/potong-hanako.py` (reproducible image cutting).
+- 70 new JVM tests (179 total).
+
+### Changed
+- Manifest: permissions `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED`; three non-exported receivers; MainActivity is `singleTop`.
+- DataStore: new reminder keys only (Room schema untouched, still version 1).
+- The temporary vector illustration of Hanako was removed.
+
+### Not done / not verified
+- Gradle/AGP/Compose/WorkManager build has never run; alarms, reboot recovery and notification behavior have never run on a device.
+- No holiday calendar: school reminders also fire on holidays.
+- Android 13+: the notification permission is only requested from the Pengingat screen.
+- Hanako images are small (about 123 px wide).
+
 ## [Unreleased] — Phases 3 and 4: Local Database; Schedule and Activities (2026-11-03)
 ### Added
 - Room database (version 1) with memory, activities, school hours, timetable, duty roster, tasks, goals and milestones; DAOs, entity/domain mappers, repositories, hand-written dependency container.

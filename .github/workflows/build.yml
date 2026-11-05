@@ -20,6 +20,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Static checks (resources, imports, manifest, Hanako images)
+        run: python3 tools/cek-statis.py
+
       # AGP downloads missing SDK components itself, but only after licenses are accepted.
       - name: Accept Android SDK licenses
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true

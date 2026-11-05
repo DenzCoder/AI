@@ -21,4 +21,8 @@ Checked 2026-11-02 against official pages. "Used" = declared in `libs.versions.t
 | androidx.test runner / core / ext-junit | 1.7.0 / 1.7.0 / 1.3.0 | AndroidX Test releases | androidTest only |
 | room-testing | 2.8.5 (same as Room) | AndroidX Room releases | androidTest only |
 
-Not yet verified (check in their phase): WorkManager, Supabase client, Gemini access path, biometric, speech, ML Kit (OCR).
+| work-runtime (WorkManager) | 2.12.0 (AndroidX all-channel versions page, checked 2026-11-04; its minimum compileSdk/AGP was NOT re-checked). Used only through the plain Java-style `Worker`/`PeriodicWorkRequest.Builder` API, no ktx artifact | developer.android.com androidx versions | yes (Phase 5) |
+
+Alarm and notification permissions (Phase 5), as documented by Android: `SCHEDULE_EXACT_ALARM` is not needed on Android 11, can be denied on Android 12+ (and is off by default on newer releases), `POST_NOTIFICATIONS` exists only on Android 13+. The app does not rely on any default: it reads the real state at runtime (`CekIzin`), falls back to inexact alarms and tells the user on the Pengingat screen. `USE_EXACT_ALARM` is deliberately not declared (reserved for alarm-clock and calendar apps).
+
+Not yet verified (check in their phase): Supabase client, Gemini access path, biometric, speech, ML Kit (OCR).

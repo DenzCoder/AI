@@ -1,5 +1,6 @@
 package id.asisten.app
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,10 +13,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.asisten.app.domain.pengaturan.ModeTema
 import id.asisten.app.domain.pengaturan.Pengaturan
+import id.asisten.app.notifikasi.KunciIntent
 import id.asisten.app.ui.navigation.AsistenApp
 import id.asisten.app.ui.onboarding.OnboardingScreen
 import id.asisten.app.ui.pengaturan.PengaturanViewModel
@@ -23,8 +27,13 @@ import id.asisten.app.ui.theme.AsistenTheme
 import id.asisten.app.ui.wadahViewModel
 
 class MainActivity : ComponentActivity() {
+
+    /** Tab requested by a notification ("Buka" or tapping it); cleared once the app has navigated there. */
+    private var tujuanBuka by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        tujuanBuka = intent?.getStringExtra(KunciIntent.EXTRA_BUKA)
         setContent {
             val pengaturanViewModel = wadahViewModel { PengaturanViewModel(it.pengaturan) }
             val pengaturanTersimpan by pengaturanViewModel.pengaturan.collectAsStateWithLifecycle()
@@ -64,10 +73,21 @@ class MainActivity : ComponentActivity() {
                             onSelesai = pengaturanViewModel::selesaikanOnboarding,
                         )
 
-                        else -> AsistenApp(pengaturanViewModel = pengaturanViewModel)
+                        else -> AsistenApp(
+                            pengaturanViewModel = pengaturanViewModel,
+                            tujuanBuka = tujuanBuka,
+                            onTujuanDipakai = { tujuanBuka = null },
+                        )
                     }
                 }
             }
         }
+    }
+
+    /** The activity is singleTop: tapping a notification while the app is open arrives here instead of restarting it. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        tujuanBuka = intent.getStringExtra(KunciIntent.EXTRA_BUKA)
     }
 }
