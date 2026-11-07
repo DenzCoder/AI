@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [Unreleased] — Phase 6: Hanako AI chat (2026-11-07)
+### Added
+- "AI Hanako" tab: a real chat with Hanako (history of the last 40 messages, suggestions, typing indicator, per-reply expression from the 12 character faces).
+- Local mode (no internet, nothing sent): answers about today's schedule, open tasks and goals from the phone's own data; says plainly when it does not understand.
+- Gemini mode: REST client without extra libraries, Indonesian persona prompt, conversation history, user data included only when allowed (sensitive memories never; none when memory is off), mood marker parsed into Hanako's face.
+- Settings screen: Gemini key (encrypted with the Android Keystore, consent checkbox), online switch, share-data switch, editable model name (default `gemini-flash-latest`), connection test, delete chat, delete key.
+- Specific Indonesian error messages (invalid key, access denied, quota, model not found, blocked, empty answer, server, no internet, timeout) with Coba lagi / Buka pengaturan.
+- `INTERNET` permission.
+- 85 new JVM tests (264 total), including 13 against a local loopback HTTP server.
+
+### Changed
+- Beranda Hanako card text now points to the chat tab; the placeholder section screen was removed.
+- `tools/jvm-check.sh` also compiles `data/ai`.
+
+### Not done / not verified
+- Gradle/AGP/Compose build has never run; the Android-only Phase 6 files had no independent review (the reviewer was cut off by a usage limit).
+- No request has been sent to the real Gemini API; the default model name was not checked against Google's documentation.
+- Hanako cannot change app data yet (no function calling), no streaming, no voice (Phase 7), no Supabase proxy and no automatic memory learning (Phase 9).
+
 ## [Unreleased] — Phase 5: Alarm and Notifications; Hanako character (2026-11-05)
 ### Added
 - Reminders for activities (one-time and weekly), tasks and exams (day before and due day) and school entry (with the day's duty roster), computed by pure, unit-tested logic.

@@ -47,4 +47,28 @@ class EkspresiHanakoTest {
         assertEquals(label.size, label.toSet().size)
         assertTrue(label.all { it.isNotBlank() })
     }
+
+    @Test
+    fun ekspresiSaatGagalMenghubungiGemini() {
+        assertEquals(EkspresiHanako.PANIK, PilihEkspresi.untukGalat(JenisGalat.SERVER))
+        assertEquals(EkspresiHanako.SEDIH, PilihEkspresi.untukGalat(JenisGalat.KUOTA))
+        assertEquals(EkspresiHanako.TERKEJUT, PilihEkspresi.untukGalat(JenisGalat.DIBLOKIR))
+        for (j in listOf(JenisGalat.JARINGAN, JenisGalat.KUNCI_TIDAK_VALID, JenisGalat.TANPA_KUNCI, JenisGalat.KOSONG)) {
+            assertEquals(EkspresiHanako.BINGUNG, PilihEkspresi.untukGalat(j))
+        }
+    }
+
+    @Test
+    fun wajahHeaderChatMengikutiKeadaan() {
+        val pagi = LocalTime.of(8, 0)
+        // menunggu jawaban mengalahkan semuanya
+        assertEquals(EkspresiHanako.BERPIKIR, PilihEkspresi.untukChat(true, JenisGalat.SERVER, EkspresiHanako.TERTAWA, pagi))
+        // galat mengalahkan suasana balasan terakhir
+        assertEquals(EkspresiHanako.PANIK, PilihEkspresi.untukChat(false, JenisGalat.SERVER, EkspresiHanako.TERTAWA, pagi))
+        // balasan terakhir
+        assertEquals(EkspresiHanako.TERTAWA, PilihEkspresi.untukChat(false, null, EkspresiHanako.TERTAWA, pagi))
+        // belum ada percakapan: wajah menurut waktu
+        assertEquals(EkspresiHanako.SENYUM, PilihEkspresi.untukChat(false, null, null, pagi))
+        assertEquals(EkspresiHanako.MENGANTUK, PilihEkspresi.untukChat(false, null, null, LocalTime.of(23, 0)))
+    }
 }

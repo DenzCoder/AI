@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # JVM-only logic check. Compiles the pure-Kotlin `domain/` package and its unit tests with the
 # Kotlin compiler (2.0.21) and JUnit 4 that ship inside a Gradle distribution, then runs the tests.
-# Also compiles data/db/Entitas.kt + Pemetaan.kt against tiny Java stubs of the Room annotations.
+# Also compiles data/db/Entitas.kt + Pemetaan.kt against tiny Java stubs of the Room annotations,
+# and data/ai (the Gemini HTTP client, tested against a local loopback server).
 # This does NOT replace the Gradle/AGP build: it never touches Android, Compose, Room or DataStore,
 # and it uses an older Kotlin compiler than the project. It only proves the domain logic.
 set -euo pipefail
@@ -22,6 +23,7 @@ kc() { java -cp "$COMPILER_CP" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler -no-st
 
 # Pure domain code plus the Room entities and their mappers (annotations come from tools/stubs).
 mapfile -t MAIN < <(find "$ROOT/app/src/main/kotlin/id/asisten/app/domain" -name '*.kt'; \
+  find "$ROOT/app/src/main/kotlin/id/asisten/app/data/ai" -name '*.kt' 2>/dev/null; \
   find "$ROOT/app/src/main/kotlin/id/asisten/app/data/db" \( -name 'Entitas.kt' -o -name 'Pemetaan.kt' \) 2>/dev/null)
 mkdir -p "$OUT/stubs"
 javac -d "$OUT/stubs" $(find "$ROOT/tools/stubs" -name '*.java')

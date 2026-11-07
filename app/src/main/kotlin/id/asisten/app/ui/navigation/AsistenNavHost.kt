@@ -22,15 +22,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import id.asisten.app.R
 import id.asisten.app.domain.pengaturan.Pengaturan
 import id.asisten.app.domain.profil.ProfilPengguna
 import id.asisten.app.ui.aktivitas.AktivitasScreen
 import id.asisten.app.ui.beranda.BerandaScreen
+import id.asisten.app.ui.hanako.HanakoScreen
 import id.asisten.app.ui.jadwal.JadwalScreen
 import id.asisten.app.ui.pengaturan.PengaturanViewModel
 import id.asisten.app.ui.profil.ProfilScreen
-import id.asisten.app.ui.screens.BagianScreen
 
 /**
  * [tujuanBuka] is the route of a tab requested from outside (a notification). The app navigates there once and
@@ -101,9 +100,7 @@ fun AsistenApp(
             composable(AsistenDestination.BERANDA.route) { BerandaScreen() }
             composable(AsistenDestination.JADWAL.route) { JadwalScreen() }
             composable(AsistenDestination.AKTIVITAS.route) { AktivitasScreen() }
-            composable(AsistenDestination.HANAKO.route) {
-                BagianScreen(R.string.hanako_judul, R.string.hanako_keterangan)
-            }
+            composable(AsistenDestination.HANAKO.route) { HanakoScreen() }
             composable(AsistenDestination.PROFIL.route) {
                 ProfilScreen(
                     pengaturan = pengaturan,

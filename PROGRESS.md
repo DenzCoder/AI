@@ -7,13 +7,13 @@
 | 3 | Local Database | Code written; domain/mapper logic verified (JVM); Room/DataStore build **NOT verified** |
 | 4 | Schedule and Activities | Code written; domain logic verified (JVM); UI build **NOT verified**; supply checklist and OCR not done |
 | 5 | Alarm and Notifications | Code written; scheduling/policy logic verified (JVM); Android layer and UI build **NOT verified**; no on-device alarm test yet |
-| 6 | Hanako AI | Not started |
+| 6 | Hanako AI | Code written; chat/prompt/parsing/client logic verified (JVM, HTTP client against a loopback server); screens, Keystore and DataStore layer build **NOT verified**; never tried on a phone or against the real Gemini API |
 | 7 | Voice System | Not started |
 | 8 | Life Management | Not started |
 | 9 | Intelligence and Cloud | Not started |
 | 10 | Final QA and APK | Not started |
 
-Verified so far: 179 JVM unit tests pass (`tools/jvm-check.sh`, Kotlin 2.0.21, domain + mappers only) and `tools/cek-statis.py` (resources, imports, manifest, Hanako images) is clean.
+Verified so far: 264 JVM unit tests pass (`tools/jvm-check.sh`, Kotlin 2.0.21: domain, mappers and the Gemini HTTP client) and `tools/cek-statis.py` (resources, imports, manifest, Hanako images) is clean.
 Not verified: Gradle/AGP build, KSP/Room, Compose, instrumented tests, on-device behavior. No APK exists.
 
 ## Phase 1 checklist
@@ -26,7 +26,7 @@ Not verified: Gradle/AGP build, KSP/Room, Compose, instrumented tests, on-device
 - [x] Dashboard with 7 widget cards, navigation, Profil screen, Hanako illustration
 - [x] Widget customization: reorder, hide/show, undo, reset to default
 - [x] Widget arrangement saved permanently (done in Phase 3)
-- [ ] More Hanako expressions — Phase 6
+- [x] More Hanako expressions: all 12 are used in the Phase 6 chat
 
 ## Phase 3 checklist
 - [x] Room entities and DAOs (version 1, schema export on)
@@ -68,3 +68,15 @@ Not verified: Gradle/AGP build, KSP/Room, Compose, instrumented tests, on-device
 - [x] Beranda card and onboarding show Hanako; expression follows time of day / reminder state
 - [ ] Gestures, motion poses, chibi: not cut yet (coordinates in the script) — Phase 6/7
 - [ ] Higher-resolution source sheet: the current images are about 123 px wide (blurry above ~100 dp)
+
+## Phase 6 checklist
+- [x] Chat tab replaces the placeholder; history kept (last 40 messages)
+- [x] Local mode: answers from real data without internet, honest when it does not understand
+- [x] Gemini mode: REST client, persona prompt in Indonesian, history, per-reply mood marker -> Hanako's face
+- [x] API key entered by the user, stored encrypted (Keystore AES-GCM), never in the repo; consent checkbox; "share app data" switch; sensitive memory never sent
+- [x] Specific Indonesian errors with retry / open-settings actions; connection test; editable model name
+- [x] INTERNET permission added
+- [ ] Build verification of the screens, ViewModel, repository and Keystore code — pending CI (no independent review either)
+- [ ] First real request to Gemini, default model name `gemini-flash-latest` unverified
+- [ ] Phone checklist (HANDOFF.md, step 6)
+- [ ] Not in this phase: Hanako changing app data (function calling), streaming, voice (Phase 7), Supabase proxy (Phase 9)

@@ -1,0 +1,289 @@
+package id.asisten.app.ui.hanako
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import id.asisten.app.R
+import id.asisten.app.domain.hanako.EkspresiHanako
+import id.asisten.app.domain.hanako.JenisGalat
+import id.asisten.app.domain.hanako.LabelHanako
+import id.asisten.app.domain.hanako.PeranChat
+import id.asisten.app.domain.hanako.PesanChat
+import id.asisten.app.domain.hanako.PilihEkspresi
+import id.asisten.app.ui.wadahViewModel
+import java.time.LocalTime
+
+/**
+ * The "AI Hanako" tab: a chat with Hanako, plus her settings (Gemini key, model, what she may see).
+ * Without a key she answers from the data on the phone only (PenjawabLokal); with a key she uses Gemini.
+ */
+@Composable
+fun HanakoScreen(modifier: Modifier = Modifier) {
+    val vm = wadahViewModel {
+        HanakoViewModel(it.hanako, it.pengaturan, it.jadwal, it.aktivitas, it.memori, it.klienGemini)
+    }
+    var tampilPengaturan by rememberSaveable { mutableStateOf(false) }
+    BackHandler(enabled = tampilPengaturan) { tampilPengaturan = false }
+
+    if (tampilPengaturan) {
+        PengaturanHanakoScreen(vm = vm, onKembali = { tampilPengaturan = false }, modifier = modifier)
+    } else {
+        ObrolanHanako(vm = vm, onBukaPengaturan = { tampilPengaturan = true }, modifier = modifier)
+    }
+}
+
+@Composable
+private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, modifier: Modifier = Modifier) {
+    val riwayat by vm.riwayat.collectAsStateWithLifecycle()
+    val pengaturan by vm.pengaturanHanako.collectAsStateWithLifecycle()
+    val sedangMenjawab by vm.sedangMenjawab.collectAsStateWithLifecycle()
+    val galat by vm.galat.collectAsStateWithLifecycle()
+    var teks by rememberSaveable { mutableStateOf("") }
+
+    val online = pengaturan?.online == true
+    val ekspresiTerakhir = riwayat.lastOrNull { it.peran == PeranChat.HANAKO }?.ekspresi
+    val ekspresi = PilihEkspresi.untukChat(sedangMenjawab, galat?.jenis, ekspresiTerakhir, LocalTime.now())
+
+    val daftar = rememberLazyListState()
+    val jumlahItem = riwayat.size + if (sedangMenjawab) 1 else 0
+    LaunchedEffect(jumlahItem) {
+        if (jumlahItem > 0) daftar.animateScrollToItem(jumlahItem - 1)
+    }
+
+    Column(modifier = modifier.fillMaxSize().imePadding()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            HanakoAvatar(ekspresi = ekspresi, lebar = 56.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.hanako_nama),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = LabelHanako.status(online),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = onBukaPengaturan) {
+                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.hanako_pengaturan_desc))
+            }
+        }
+
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            if (riwayat.isEmpty() && !sedangMenjawab) {
+                SapaanKosong(onSaran = { vm.kirim(it) })
+            } else {
+                LazyColumn(
+                    state = daftar,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    itemsIndexed(riwayat) { _, pesan -> BalonPesan(pesan) }
+                    if (sedangMenjawab) item { BalonMenunggu() }
+                }
+            }
+        }
+
+        galat?.let { g ->
+            KartuGalat(
+                jenis = g.jenis,
+                rinci = g.rinci,
+                onCobaLagi = { vm.cobaLagi() },
+                onPengaturan = {
+                    vm.tutupGalat()
+                    onBukaPengaturan()
+                },
+                onTutup = { vm.tutupGalat() },
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                value = teks,
+                onValueChange = { teks = it.take(2000) },
+                placeholder = { Text(stringResource(R.string.hanako_input_petunjuk)) },
+                maxLines = 4,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(
+                onClick = {
+                    vm.kirim(teks)
+                    teks = ""
+                },
+                enabled = teks.isNotBlank() && !sedangMenjawab,
+            ) {
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.hanako_kirim))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SapaanKosong(onSaran: (String) -> Unit) {
+    val saran = listOf(
+        stringResource(R.string.hanako_saran_jadwal),
+        stringResource(R.string.hanako_saran_tugas),
+        stringResource(R.string.hanako_saran_semangat),
+    )
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.hanako_kosong_judul),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = stringResource(R.string.hanako_kosong_isi),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            saran.forEach { s ->
+                SuggestionChip(onClick = { onSaran(s) }, label = { Text(s) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun BalonPesan(pesan: PesanChat) {
+    val dariPengguna = pesan.peran == PeranChat.PENGGUNA
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (dariPengguna) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Top,
+    ) {
+        if (!dariPengguna) {
+            HanakoAvatar(ekspresi = pesan.ekspresi ?: EkspresiHanako.NORMAL, lebar = 40.dp)
+            Box(modifier = Modifier.size(8.dp))
+        }
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = if (dariPengguna) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+            modifier = Modifier.widthIn(max = 300.dp),
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                SelectionContainer {
+                    Text(text = pesan.isi, style = MaterialTheme.typography.bodyLarge)
+                }
+                if (pesan.lokal) {
+                    Text(
+                        text = stringResource(R.string.hanako_label_lokal),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BalonMenunggu() {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        HanakoAvatar(ekspresi = EkspresiHanako.BERPIKIR, lebar = 40.dp)
+        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Text(text = stringResource(R.string.hanako_mengetik), style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
+
+@Composable
+private fun KartuGalat(
+    jenis: JenisGalat,
+    rinci: String,
+    onCobaLagi: () -> Unit,
+    onPengaturan: () -> Unit,
+    onTutup: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = LabelHanako.galat(jenis),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            if (rinci.isNotBlank()) {
+                Text(
+                    text = stringResource(R.string.hanako_rincian, rinci),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (LabelHanako.bisaDiulang(jenis)) {
+                    Button(onClick = onCobaLagi) { Text(stringResource(R.string.hanako_coba_lagi)) }
+                }
+                if (LabelHanako.perluPengaturan(jenis)) {
+                    OutlinedButton(onClick = onPengaturan) { Text(stringResource(R.string.hanako_buka_pengaturan)) }
+                }
+                TextButton(onClick = onTutup) { Text(stringResource(R.string.hanako_tutup)) }
+            }
+        }
+    }
+}

@@ -5,7 +5,11 @@
          - POST_NOTIFICATIONS: Android 13+ only; the app asks at runtime from the Pengingat screen, never on Android 11.
          - SCHEDULE_EXACT_ALARM: Android 12+ only, so reminders ring on time. If the user denies it the app
            falls back to inexact alarms and says so on the Pengingat screen. (Not needed on Android 11.)
-         - RECEIVE_BOOT_COMPLETED: re-arm the alarm after the phone restarts. -->
+         - RECEIVE_BOOT_COMPLETED: re-arm the alarm after the phone restarts.
+         Phase 6 (Hanako AI):
+         - INTERNET: only to reach the Gemini API when the user has entered a key and switched online mode on.
+           (A normal permission, granted at install; nothing is sent while the app is in local mode.) -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />

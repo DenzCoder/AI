@@ -15,14 +15,60 @@
     <string name="sapaan_sore">Selamat sore</string>
     <string name="sapaan_malam">Selamat malam</string>
 
-    <!-- Bagian yang fiturnya hadir di fase berikutnya -->
-    <string name="hanako_judul">AI Hanako</string>
-    <string name="hanako_keterangan">Percakapan dan perintah untuk Hanako akan tersedia di sini.</string>
-    <string name="status_pengembangan">Bagian ini masih dalam pengembangan.</string>
+    <!-- Tab AI Hanako (Fase 6) -->
+    <string name="hanako_nama">Hanako</string>
+    <string name="hanako_pengaturan_desc">Pengaturan Hanako</string>
+    <string name="hanako_kosong_judul">Ngobrol dengan Hanako</string>
+    <string name="hanako_kosong_isi">Tanya soal jadwal, tugas, atau tujuanmu. Tanpa kunci Gemini, aku menjawab dari data di ponselmu saja.</string>
+    <string name="hanako_saran_jadwal">Apa jadwalku hari ini?</string>
+    <string name="hanako_saran_tugas">Tugas apa yang paling mendesak?</string>
+    <string name="hanako_saran_semangat">Semangati aku dong</string>
+    <string name="hanako_input_petunjuk">Tulis pesan untuk Hanako</string>
+    <string name="hanako_kirim">Kirim</string>
+    <string name="hanako_mengetik">Hanako sedang berpikir…</string>
+    <string name="hanako_label_lokal">Jawaban lokal, tanpa internet</string>
+    <string name="hanako_rincian">Rincian dari server: %1$s</string>
+    <string name="hanako_coba_lagi">Coba lagi</string>
+    <string name="hanako_buka_pengaturan">Buka pengaturan</string>
+    <string name="hanako_tutup">Tutup</string>
+
+    <!-- Pengaturan Hanako -->
+    <string name="hanako_kembali">Kembali</string>
+    <string name="hanako_set_judul">Pengaturan Hanako</string>
+    <string name="hanako_set_ai_judul">Otak AI (Gemini)</string>
+    <string name="hanako_set_ai_ket">Hanako memakai Gemini dari Google dengan kunci API milikmu sendiri. Pesanmu dikirim ke Google lewat internet, begitu juga ringkasan jadwal, tugas, tujuan, dan memori yang tidak sensitif kalau kamu mengizinkannya di bawah. Menurut Google, data dari paket gratis dapat dipakai untuk memperbaiki produknya, dan paket gratis punya batas pemakaian. Kunci disimpan terenkripsi di ponsel ini dan tidak pernah ikut dalam kode aplikasi.</string>
+    <string name="hanako_set_kunci_tersimpan">Kunci tersimpan (terenkripsi di ponsel ini).</string>
+    <string name="hanako_set_kunci_belum">Belum ada kunci. Hanako memakai mode lokal.</string>
+    <string name="hanako_set_kunci_label">Kunci API Gemini</string>
+    <string name="hanako_set_kunci_petunjuk">Tempel kunci dari Google AI Studio</string>
+    <string name="hanako_set_setuju">Saya mengerti bahwa pesan saya dikirim ke Google Gemini.</string>
+    <string name="hanako_set_simpan">Simpan kunci</string>
+    <string name="hanako_set_hapus_kunci">Hapus kunci</string>
+    <string name="hanako_set_hapus_kunci_tanya">Kunci Gemini akan dihapus dari ponsel ini dan Hanako kembali ke mode lokal. Kamu bisa memasukkannya lagi kapan saja.</string>
+    <string name="hanako_set_kunci_disimpan">Kunci disimpan. Hanako sekarang memakai Gemini.</string>
+    <string name="hanako_set_kunci_ditolak">Kunci ini tidak terlihat benar, atau ponsel ini tidak bisa menyimpannya dengan aman. Kunci tidak disimpan.</string>
+    <string name="hanako_set_perlu_setuju">Centang persetujuan dulu sebelum menyimpan kunci.</string>
+    <string name="hanako_set_buka_studio">Buat kunci di Google AI Studio</string>
+    <string name="hanako_set_perilaku">Perilaku</string>
+    <string name="hanako_set_online">Pakai AI online</string>
+    <string name="hanako_set_online_ket">Matikan untuk memakai mode lokal tanpa internet. Perlu kunci.</string>
+    <string name="hanako_set_bagikan">Bagikan data aplikasi ke AI</string>
+    <string name="hanako_set_bagikan_ket">Jadwal hari ini, tugas, tujuan, dan memori yang tidak ditandai sensitif. Memori sensitif tidak pernah dikirim, dan tidak ada yang dikirim kalau memori dimatikan di Profil.</string>
+    <string name="hanako_set_model">Model</string>
+    <string name="hanako_set_model_label">Nama model Gemini</string>
+    <string name="hanako_set_model_petunjuk">Bawaan: gemini-flash-latest. Ganti kalau Google mengubah namanya.</string>
+    <string name="hanako_set_model_simpan">Simpan model</string>
+    <string name="hanako_set_uji">Uji koneksi</string>
+    <string name="hanako_set_uji_proses">Menguji…</string>
+    <string name="hanako_set_uji_berhasil">Berhasil: Gemini menjawab.</string>
+    <string name="hanako_set_riwayat">Percakapan</string>
+    <string name="hanako_set_riwayat_ket">Percakapan disimpan di ponsel ini (maksimal 40 pesan terakhir).</string>
+    <string name="hanako_set_hapus_riwayat">Hapus semua percakapan</string>
+    <string name="hanako_set_hapus_riwayat_tanya">Semua percakapan dengan Hanako akan dihapus dan tidak bisa dikembalikan.</string>
 
     <!-- Kartu Hanako -->
     <string name="hanako_kartu_judul">Hai, aku Hanako.</string>
-    <string name="hanako_kartu_isi">Aku akan membantumu mengatur hari setelah fitur-fiturnya selesai dibuat.</string>
+    <string name="hanako_kartu_isi">Tanyakan jadwal dan tugasmu di tab AI Hanako. Aku siap membantu.</string>
 
     <!-- Widget Beranda -->
     <string name="widget_jadwal_judul">Jadwal hari ini</string>

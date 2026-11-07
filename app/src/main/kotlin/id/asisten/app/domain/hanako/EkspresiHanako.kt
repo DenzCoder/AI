@@ -48,4 +48,31 @@ object PilihEkspresi {
         mode == ModePengingat.ISTIRAHAT -> EkspresiHanako.MENGANTUK
         else -> EkspresiHanako.SENYUM
     }
+
+    /**
+     * Chat header face: thinking while a reply is on its way, a trouble face after a failure, otherwise the mood of
+     * Hanako's latest reply, and the time-of-day face before anything has been said.
+     */
+    fun untukChat(
+        sedangMenjawab: Boolean,
+        galat: JenisGalat?,
+        ekspresiBalasanTerakhir: EkspresiHanako?,
+        waktu: LocalTime,
+    ): EkspresiHanako = when {
+        sedangMenjawab -> EkspresiHanako.BERPIKIR
+        galat != null -> untukGalat(galat)
+        ekspresiBalasanTerakhir != null -> ekspresiBalasanTerakhir
+        else -> untukWaktu(waktu)
+    }
+
+    /**
+     * Chat: what Hanako's face shows when a Gemini request fails. Server trouble startles her, a used-up quota
+     * saddens her, everything else (network, key, blocked) just confuses her.
+     */
+    fun untukGalat(jenis: JenisGalat): EkspresiHanako = when (jenis) {
+        JenisGalat.SERVER -> EkspresiHanako.PANIK
+        JenisGalat.KUOTA -> EkspresiHanako.SEDIH
+        JenisGalat.DIBLOKIR -> EkspresiHanako.TERKEJUT
+        else -> EkspresiHanako.BINGUNG
+    }
 }
