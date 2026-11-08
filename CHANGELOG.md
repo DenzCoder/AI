@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [Unreleased] — Phase 7: Voice (2026-11-08)
+### Added
+- Microphone button in the chat: the system speech dialog (Indonesian) fills the input; the user still presses Send. No microphone permission is requested by this app.
+- Read aloud: a speaker icon on each Hanako reply, a stop button while she speaks, and an optional "read replies automatically" switch (off by default). Indonesian text-to-speech with speed and pitch settings.
+- Speech text cleaner: times ("07:00–08:30" -> "7 sampai 8 lewat 30"), bullet lists, links, emoji, markdown, dashes and percent signs are turned into something an engine reads well.
+- Voice section in Hanako's settings: auto-read, speed, pitch, a test button, an honest engine status and a button to install missing Indonesian voice data.
+- Manifest `<queries>` for the text-to-speech service and the speech recognizer (Android 11+).
+- Three vector icons (microphone, speaker, stop).
+- 22 new JVM tests (286 total); they found and led to the fix of two bugs in the first version of the cleaner.
+
+### Not done / not verified
+- Gradle/AGP/Compose build has never run; `TextToSpeech`, the speech dialog and the new screens have never run on a device and had no independent review.
+- No wake word or always-on listening, no voice commands that change data (Hanako cannot change app data yet), no spoken reminders.
+- The master prompt's own Phase 6 and 7 text was not available to the session that wrote them: scope was derived from the phase names and must be compared.
+
 ## [Unreleased] — Phase 6: Hanako AI chat (2026-11-07)
 ### Added
 - "AI Hanako" tab: a real chat with Hanako (history of the last 40 messages, suggestions, typing indicator, per-reply expression from the 12 character faces).

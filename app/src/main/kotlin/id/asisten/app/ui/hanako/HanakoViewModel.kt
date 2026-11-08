@@ -8,6 +8,7 @@ import id.asisten.app.data.pengaturan.PengaturanRepository
 import id.asisten.app.data.repo.AktivitasRepository
 import id.asisten.app.data.repo.JadwalRepository
 import id.asisten.app.data.repo.MemoriRepository
+import id.asisten.app.data.suara.SuaraRepository
 import id.asisten.app.domain.hanako.EkspresiHanako
 import id.asisten.app.domain.hanako.HasilGemini
 import id.asisten.app.domain.hanako.JenisGalat
@@ -22,11 +23,16 @@ import id.asisten.app.domain.hanako.RiwayatChat
 import id.asisten.app.domain.hanako.UraiBalasan
 import id.asisten.app.domain.jadwal.PenyusunHarian
 import id.asisten.app.domain.memori.KonteksAi
+import id.asisten.app.domain.suara.PengaturanSuara
+import id.asisten.app.suara.PembacaSuara
 import java.time.LocalDateTime
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -50,6 +56,8 @@ class HanakoViewModel(
     private val aktivitas: AktivitasRepository,
     private val memori: MemoriRepository,
     private val klien: KlienGemini,
+    private val suara: SuaraRepository,
+    private val pembaca: PembacaSuara,
 ) : ViewModel() {
 
     val riwayat: StateFlow<List<PesanChat>> =
@@ -67,6 +75,15 @@ class HanakoViewModel(
 
     private val _hasilUji = MutableStateFlow<HasilUji?>(null)
     val hasilUji: StateFlow<HasilUji?> = _hasilUji.asStateFlow()
+
+    /** Each new reply of Hanako (not the stored history), for read-aloud. */
+    private val _balasanBaru = MutableSharedFlow<PesanChat>(extraBufferCapacity = 4)
+    val balasanBaru: SharedFlow<PesanChat> = _balasanBaru.asSharedFlow()
+
+    val pengaturanSuara: StateFlow<PengaturanSuara> =
+        suara.pengaturan.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PengaturanSuara())
+    val sedangBicara = pembaca.sedangBicara
+    val statusSuara = pembaca.status
 
     private val _pesanKunci = MutableStateFlow<PesanKunci?>(null)
     val pesanKunci: StateFlow<PesanKunci?> = _pesanKunci.asStateFlow()
@@ -112,7 +129,7 @@ class HanakoViewModel(
             if (!p.online) {
                 // Local mode: answers come from the data on the phone only; nothing is sent anywhere.
                 val b = PenjawabLokal.jawab(pertanyaan, kumpulkanLatar(bagikan = true, ikutkanMemori = false))
-                hanako.tambahPesan(PesanChat(PeranChat.HANAKO, b.teks, b.ekspresi, System.currentTimeMillis(), lokal = true))
+                simpanBalasan(PesanChat(PeranChat.HANAKO, b.teks, b.ekspresi, System.currentTimeMillis(), lokal = true))
                 return
             }
             val kunci = hanako.kunci()
@@ -129,7 +146,7 @@ class HanakoViewModel(
                     if (b.teks.isEmpty()) {
                         _galat.value = GalatChat(JenisGalat.KOSONG)
                     } else {
-                        hanako.tambahPesan(
+                        simpanBalasan(
                             PesanChat(PeranChat.HANAKO, b.teks, b.ekspresi ?: EkspresiHanako.NORMAL, System.currentTimeMillis()),
                         )
                     }
@@ -140,6 +157,12 @@ class HanakoViewModel(
         } catch (e: Exception) {
             _galat.value = GalatChat(JenisGalat.TIDAK_DIKENAL, e.javaClass.simpleName)
         }
+    }
+
+    /** Stores Hanako's reply and announces it, so the screen can read it aloud when that is switched on. */
+    private suspend fun simpanBalasan(pesan: PesanChat) {
+        hanako.tambahPesan(pesan)
+        _balasanBaru.tryEmit(pesan)
     }
 
     /**
@@ -236,5 +259,37 @@ class HanakoViewModel(
 
     fun tutupPesanKunci() {
         _pesanKunci.value = null
+    }
+
+    // --- voice ---
+
+    fun bacaKeras(teks: String) {
+        val p = pengaturanSuara.value
+        pembaca.bicara(teks, p.kecepatan, p.nada)
+    }
+
+    fun berhenti() {
+        pembaca.berhenti()
+    }
+
+    /** Starts the speech engine so its status is known (used when the settings screen opens). */
+    fun periksaSuara() {
+        pembaca.siapkan()
+    }
+
+    fun ubahBacaOtomatis(aktif: Boolean) {
+        viewModelScope.launch { suara.ubahBacaOtomatis(aktif) }
+    }
+
+    fun ubahKecepatan(nilai: Float) {
+        viewModelScope.launch { suara.ubahKecepatan(nilai) }
+    }
+
+    fun ubahNada(nilai: Float) {
+        viewModelScope.launch { suara.ubahNada(nilai) }
+    }
+
+    override fun onCleared() {
+        pembaca.lepas()
     }
 }

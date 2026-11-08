@@ -1,11 +1,13 @@
-# HANDOFF — after Phase 6 (Hanako AI chat)
+# HANDOFF — after Phase 7 (Voice)
 
-Last updated: 2026-11-07
+Last updated: 2026-11-08
 
 ## Status in one line
-Phases 1–6 source code is written. The **pure logic and the Gemini HTTP client are verified** (264 JVM unit tests pass, the HTTP client against a real loopback server) and the static checks are clean. The **Android build has never run** (Gradle, KSP/Room, Compose, DataStore, WorkManager, Keystore, instrumented tests, device): the authoring sandbox cannot reach Gradle/Maven (re-probed on 2026-11-06, still HTTP 000/403). **Phase 5 alarms and the Phase 6 chat have never been seen on a device, and no request has ever been sent to the real Gemini API.**
+Phases 1–7 source code is written. The **pure logic and the Gemini HTTP client are verified** (286 JVM unit tests pass, the HTTP client against a real loopback server) and the static checks are clean. The **Android build has never run** (Gradle, KSP/Room, Compose, DataStore, WorkManager, Keystore, TextToSpeech, speech dialog, instrumented tests, device): the authoring sandbox cannot reach Gradle/Maven (re-probed 2026-11-08, still HTTP 000). **Phase 5 alarms, the Phase 6 chat and the Phase 7 voice have never been seen on a device, and no request has ever been sent to the real Gemini API.**
 
-Why Phase 6 was started before a green build: an earlier note here said to wait for a green GitHub Actions build. The user answered "Lanjutkan" four times without a build report, so work continued, but Phase 6 was kept in small isolated files (nothing in Phases 1–5 was rewritten, only wired up) so a failing build is easy to trace. If the first CI run fails, fix compile errors first and add no features.
+Why work continued without a green build: an earlier note said to wait for a green GitHub Actions build. The user answered "Lanjutkan" repeatedly without a build report, so Phases 6 and 7 were written, each in small isolated files (nothing in Phases 1–5 was rewritten, only wired up). Three phases of unbuilt code now stack up: if the first CI run fails, fix compile errors first and add no features.
+
+**Scope caveat**: the text of the original master prompt was not available to the sessions that wrote Phases 6 and 7 (only a summary survived). Their scope was derived from the phase names and the earlier summary. Compare with the master prompt and list anything missing (for example voice commands that change data, wake word, languages, specific screens) before calling those phases complete.
 
 ## How the code came to be (read this)
 Part of Phases 3/4 (domain, data layer, repositories, ViewModels, most unit tests, `tools/jvm-check.sh`) was written in an earlier working session whose conversation was not available to the session that finished them. Five files from that earlier work were accidentally overwritten and then reconstructed (`domain/memori/Memori.kt`, `domain/dasbor/TataLetakCodec.kt`, the three Gradle files); `Pengaturan.kt` was restored from git. Details were in the Phase 3/4 handoff; after the repair all tests passed, so the reconstruction is consistent. Phase 5 and the Hanako work were written in one session and did not touch those files except to add to the Gradle files and to `PengaturanRepository.kt`.
@@ -22,6 +24,14 @@ Part of Phases 3/4 (domain, data layer, repositories, ViewModels, most unit test
 - **Modes** (`PengaturanPengingat`): quiet hours (default off, 22:00–06:00, crosses midnight): reminders still appear, silently. Fokus (25–90 min): only Tinggi-priority reminders make sound. Istirahat (15–120 min): everything silent. Modes expire by themselves; the policy checks the clock at delivery time, nothing needs to be scheduled to end a mode.
 - **Permissions**: manifest declares `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED`. The notification permission is requested **only on Android 13+, only when notifications are off, only from Profil -> Atur pengingat**; on Android 11 nothing is requested. Exact alarms need no permission on Android 11. `USE_EXACT_ALARM` is deliberately not declared. The screen links to the right system pages (notification settings, exact-alarm page on Android 12+, battery optimization).
 - **UI**: Profil -> "Atur pengingat" -> screen with Hanako's mood card, permission status, all settings, mode buttons, the **next real reminders** (computed by the same logic the alarm uses: the quickest way to see that scheduling works) and a **test notification** button that goes through the real channels and tells why it was silent.
+
+### Phase 7 — Voice
+- **Dictation (speech to text)**: a microphone button next to the chat input opens the **system's own speech dialog** (`RecognizerIntent`, Indonesian, free-form). The recognized text is added to the input field (first letter capitalised when it starts a sentence, a single space before it, cut at 2000 characters) and the user still presses Send. This app records nothing itself, so **no `RECORD_AUDIO` permission** is requested. The dialog is normally Google's and usually needs internet; the settings screen says that audio is processed by Google, not by this app. If no recognizer exists the chat shows an honest message under the input.
+- **Read aloud (text to speech)**: each Hanako bubble has a speaker icon; a stop button appears in the header while she speaks; a switch in the settings reads every new reply automatically (default off). `PembacaSuara` wraps `android.speech.tts.TextToSpeech` (Indonesian, speech rate and pitch from settings, queue flush so a new reply replaces the old one). The engine is started on first use and released when the chat's ViewModel is cleared; speech stops when the chat screen is left.
+- **Text prepared for speech** (`PenyiapTeksUcap`, tested): web addresses become "tautan", "07:00–08:30" becomes "7 sampai 8 lewat 30", "16:20" becomes "16 lewat 20", bullets and numbering become separate sentences, markdown marks and emoji are removed, long dashes and "%" are spoken as words, input is cut to 3500 characters at a sentence end (the engine refuses about 4000).
+- **Voice settings** (in the Hanako gear screen): auto-read switch, speed (Lambat 0.8 / Normal / Cepat 1.25), pitch (Rendah 0.85 / Normal / Tinggi 1.15), a test button, and an honest engine status ("siap", "data suara bahasa Indonesia belum terpasang" with a button to the system's install screen, "tidak didukung", "mesin gagal"). Stored in DataStore (new keys), values normalised when read.
+- **Manifest**: `<queries>` for the TTS service and the speech recognizer (needed on Android 11+ or the engine may be invisible to the app). No new permission.
+- **Not in Phase 7**: no always-listening or wake word (battery and privacy), no voice commands that change data (Hanako cannot change app data yet), no spoken reminders, no streaming speech, no offline recognizer of our own, no gesture/motion images.
 
 ### Phase 6 — Hanako AI chat (Gemini)
 - **Tab "AI Hanako"** (`ui/hanako/HanakoScreen.kt`): chat bubbles, suggestion chips on an empty chat, a "Hanako is thinking" bubble, auto-scroll, header with Hanako's face and the mode ("Terhubung ke Gemini" or "Mode lokal"), a gear icon for settings, error card with **Coba lagi** / **Buka pengaturan** / **Tutup**. The face follows the situation (`PilihEkspresi.untukChat`): thinking while waiting, a trouble face after an error, otherwise the mood of her last reply. Every reply bubble shows its own expression.
@@ -46,7 +56,7 @@ Part of Phases 3/4 (domain, data layer, repositories, ViewModels, most unit test
 ### Earlier phases (unchanged)
 Phases 1–4: Room v1 (all tables), DataStore settings/profile/layout, onboarding, Memori Hanako, Jadwal (day/week/month, conflicts, school hours/timetable/duty), Aktivitas (tasks, goals, milestones, history), dashboard cards with real data. See CHANGELOG.md.
 
-## Current project structure (new or changed in Phases 5 and 6)
+## Current project structure (new or changed in Phases 5, 6 and 7)
 ```
 app/src/main/kotlin/id/asisten/app/
   AsistenAplikasi.kt *              container (+ hanako, klienGemini) + mulaiPengingat() (channels, worker, startup catch-up, edit observer)
@@ -57,7 +67,10 @@ app/src/main/kotlin/id/asisten/app/
                                     ProtokolGemini (request body, response parser, error kinds, mood marker),
                                     KonteksHanako (persona prompt + RingkasData), PenjawabLokal, LabelHanako,
                                     PengaturanHanako (+NamaModel, KunciGemini)   (pure, tested)
+  domain/suara/                     PenyiapTeksUcap, PengaturanSuara (+PilihanSuara, StatusSuara, LabelSuara, PenyisipDiktean)   (pure, tested)
   data/ai/KlienGemini.kt            HttpURLConnection client (tested against a loopback server)
+  data/suara/SuaraRepository.kt     voice settings in DataStore
+  suara/PembacaSuara.kt             TextToSpeech wrapper (Android only)
   data/hanako/                      HanakoRepository (settings, encrypted key, history), PenyimpanKunci (Keystore AES-GCM)
   ui/hanako/ *                      HanakoScreen, PengaturanHanakoScreen, HanakoViewModel (+ HanakoAvatar)
   notifikasi/                       PenampilNotifikasi, PenjadwalPengingat, Penerima (3 receivers), PekerjaPengaman,
@@ -65,7 +78,7 @@ app/src/main/kotlin/id/asisten/app/
   data/pengaturan/PengaturanRepository.kt *   + reminder keys, `pengingat`, `keadaanPengingat`
   ui/pengingat/                     PengingatScreen, PengingatViewModel
   ui/{beranda,onboarding,profil,navigation}/ *   Hanako avatar, entry to Pengingat, tab from notification
-app/src/main/res/drawable/ic_notifikasi.xml      bell icon;  drawable-nodpi/hanako_*.webp
+app/src/main/res/drawable/ic_notifikasi.xml, ic_mikrofon.xml, ic_suara.xml, ic_berhenti.xml;  drawable-nodpi/hanako_*.webp
 tools/jvm-check.sh (now also compiles data/ai)  tools/cek-statis.py  tools/potong-hanako.py
 docs/referensi/hanako-lembar-karakter.png
 ```
@@ -85,13 +98,18 @@ docs/referensi/hanako-lembar-karakter.png
 18. **Generous output budget (2048 tokens) and no thinking parameter.** Thinking models spend output tokens on reasoning; the thinking-config field name differs per model generation and a wrong one can be rejected, so none is sent. An answer that is empty because the budget ran out is reported as "terpotong", not shown blank.
 19. **Local mode is a real feature, not a placeholder**: keyword answers from real data, honest when it does not understand. It never sends anything.
 20. **Chat history in DataStore, not Room**: keeps the Room schema at version 1 (a migration is planned in Phase 9 for memory status).
+21. **Dictation through the system dialog, not an in-app `SpeechRecognizer`.** No microphone permission, no foreground service, no always-on listening; the trade-off is that the Google dialog appears over the app and needs the Google app (and usually internet).
+22. **Own icons as vector drawables** (microphone, speaker, stop): only `material-icons-core` is a dependency and it has none of them; adding icons-extended would bloat the APK.
+23. **Speech text is cleaned in pure code** so that what the engine says is testable here; the engine and recognizer are the only untestable parts.
+24. **TTS is released when the chat ViewModel is cleared** and stops when the screen is left, so the engine does not stay bound in memory on a 4 GB phone.
 
 ## Tests performed and their REAL results
-- `tools/jvm-check.sh`: compiles 34 domain/`data/ai` files plus the entity/mapper files against Room annotation stubs, and 25 test files, with Kotlin 2.0.21, then runs JUnit. **Result: OK (264 tests)**: 179 from Phases 1–5 and **85 new for Phase 6**: `MiniJson` 9 (nested values, escapes, round trip of tricky text, malformed input, depth limit), chat history and codec 9, request body / response parser / error mapping / mood marker 16, prompt builder 12 (date and time, sensitive memory never included, "not shared" mode, injection by line breaks, size cap, all 12 expression markers named), local responder 14, error labels 4, settings/model/key validation 6, expression choice 2, and **13 tests of `KlienGemini` against a real server on 127.0.0.1** (method, path, key only in the header, never in the URL, request body bytes incl. emoji, 400/403/404/429/503 mapping, key blanked out of error text, timeout, connection refused, invalid model names and blank key never reach the server, redirects not followed, 3 MB response cut off, HTTPS-only rule, coroutine entry point).
+- `tools/jvm-check.sh`: compiles 36 domain/`data/ai` files plus the entity/mapper files against Room annotation stubs, and 27 test files, with Kotlin 2.0.21, then runs JUnit. **Result: OK (286 tests)**: 179 from Phases 1–5, **22 new for Phase 7** (speech text cleaner 10, settings/status/dictation helpers 12) and **85 for Phase 6**: `MiniJson` 9 (nested values, escapes, round trip of tricky text, malformed input, depth limit), chat history and codec 9, request body / response parser / error mapping / mood marker 16, prompt builder 12 (date and time, sensitive memory never included, "not shared" mode, injection by line breaks, size cap, all 12 expression markers named), local responder 14, error labels 4, settings/model/key validation 6, expression choice 2, and **13 tests of `KlienGemini` against a real server on 127.0.0.1** (method, path, key only in the header, never in the URL, request body bytes incl. emoji, 400/403/404/429/503 mapping, key blanked out of error text, timeout, connection refused, invalid model names and blank key never reach the server, redirects not followed, 3 MB response cut off, HTTPS-only rule, coroutine entry point).
 - **Sanity check of the tests themselves**: seven deliberate bugs in scratch copies (sensitive memories included, "thought" parts not skipped, quote not escaped, history not starting with a user turn, redirects followed, key not blanked, model name not validated): the suite failed 7 + 3 tests, i.e. it detects them.
-- `tools/cek-statis.py`: clean on 100 Kotlin and 9 XML files (all `R.string` references of the new screens resolve, imports resolve, manifest classes exist).
-- **Independent review**: a separate review agent was started for the Android-only Phase 6 files (screens, ViewModel, repository, Keystore code) but was cut off twice by a usage limit and reported nothing. **That code has had no independent review.** Only signatures of the functions it calls were re-checked by grep.
-- **Not run**: `./gradlew`, KSP/Room, Compose compilation, `HanakoRepository`/DataStore, the Keystore code, WorkManager, instrumented tests, lint, **any on-device test, any request to the real Gemini API**. **No APK exists.**
+- The Phase 7 tests found **two real bugs** in the first version of the speech text cleaner (a full stop was placed after an emoji, and an emoji-only reply became "."); both were fixed and are covered now.
+- `tools/cek-statis.py`: clean on 106 Kotlin and 12 XML files (all `R.string` / `R.drawable` references resolve, imports resolve, manifest classes exist).
+- **Independent review**: a separate review agent was started for the Android-only Phase 6 files (screens, ViewModel, repository, Keystore code) but was cut off twice by a usage limit and reported nothing. **That code, and the Android-only Phase 7 code (`PembacaSuara`, the screens' voice parts), has had no independent review.** Only signatures of the functions it calls were re-checked by grep.
+- **Not run**: `./gradlew`, KSP/Room, Compose compilation, `HanakoRepository`/`SuaraRepository`/DataStore, the Keystore code, `TextToSpeech`, the speech dialog, WorkManager, instrumented tests, lint, **any on-device test, any request to the real Gemini API**. **No APK exists.**
 
 ## Known issues, risks and gaps
 Unverified compile risks (most likely first):
@@ -102,6 +120,13 @@ Unverified compile risks (most likely first):
 - `wadahViewModel` (inline composable with `crossinline`) and smart-casts in `MainActivity`'s `when`.
 - Phase 6 Android files (never compiled, never reviewed by a second pair of eyes): `SuggestionChip`, `OutlinedTextField` with `visualTransformation`/`keyboardOptions`, `imePadding`, `SelectionContainer`, `LocalUriHandler`, `PasswordVisualTransformation` in the Compose screens; `KeyGenParameterSpec`, `GCMParameterSpec(128, bytes, 0, 12)` and `java.util.Base64` in `PenyimpanKunci.kt`; `data object` and expression-bodied `try` in `HanakoViewModel`.
 - `KlienGeminiTest` uses `com.sun.net.httpserver`. It compiles in the JVM harness, but if the Android Gradle unit-test compilation cannot see that JDK package, delete `app/src/test/kotlin/id/asisten/app/data/ai/KlienGeminiTest.kt` (the logic is also covered by the other tests) and say so in the next handoff.
+
+Phase 7 compile risks (never compiled or reviewed): `rememberLauncherForActivityResult(StartActivityForResult)` and `ActivityResult.data` in `HanakoScreen`, `UtteranceProgressListener` overrides (the deprecated `onError(String)` must stay), `TextToSpeech.speak(CharSequence, Int, Bundle?, String)`, `floatPreferencesKey`, `Icon(painterResource(...))` with the new vector drawables, `<queries>` placement in the manifest.
+
+Phase 7 behavior risks:
+- The speech dialog may be missing or may need internet; the Indonesian TTS voice may be missing (the settings screen reports it). On the Narzo 50i Prime (Android 11) the Google speech engine is normally present, but this was not tried.
+- Spoken times ("16 lewat 20") and bullet pauses are a best guess at how the engine reads them; adjust `PenyiapTeksUcap` after listening.
+- Auto-read speaks every new reply, including local ones; if that is annoying, leave the switch off (default).
 
 Phase 6 behavior risks:
 - The default model name may be wrong or retired: use Uji koneksi first (see decision 17).
@@ -119,7 +144,7 @@ Gaps against the master prompt (not hidden):
 - Android 13+ has no prompt outside the Pengingat screen (the target phone is Android 11).
 - School supply checklist, OCR import, bulk reschedule, memory prediction status (see earlier handoff; the last needs a Room migration in Phase 9).
 - Hanako: only faces are used (now also in the chat); gestures, motion poses, chibi and higher-resolution images are still to do.
-- Hanako cannot create or change tasks/schedule yet (no function calling), no streaming, no voice (Phase 7).
+- Hanako cannot create or change tasks/schedule yet (no function calling), no streaming, no wake word, no spoken reminders.
 - Prayer, habits, money, study, wellness, journal: Phase 8. Supabase and automatic memory learning: Phase 9.
 
 ## Exact next steps
@@ -143,13 +168,20 @@ Gaps against the master prompt (not hidden):
    e. Switch airplane mode on and send a message: a "Tidak bisa terhubung ke internet" card with **Coba lagi**; switch it off and tap Coba lagi: the answer arrives.
    f. Kill and reopen the app: the chat history is still there; **Hapus semua percakapan** empties it. **Hapus kunci** returns to local mode.
    g. Note any crash, odd layout (keyboard gap), wrong face or wrong answer.
-7. Then Phase 7 (voice): speech-to-text and text-to-speech on top of this chat, using the same `HanakoViewModel.kirim`; the motion/gesture images can be cut then.
+7. Phone checklist, **Phase 7**:
+   a. In the chat tap the **microphone**: the system speech dialog opens in Indonesian; say "apa jadwalku hari ini": the text appears in the input (capitalised) and nothing is sent until you press Send. Deny or cancel: nothing breaks.
+   b. Tap the **speaker icon** under a Hanako bubble: she reads it; the header shows a stop button while she speaks; tapping stop silences her. Leave the tab while she speaks: she stops.
+   c. Gear screen -> **Suara**: tap **Uji suara**; change speed and pitch and test again; the status line says whether Indonesian is available (if the data is missing, **Pasang data suara** opens the system installer).
+   d. Switch **Bacakan balasan otomatis** on and send a message: the reply is read by itself. Listen to how times and lists sound ("07:00–08:30 Matematika"), and note anything that sounds wrong.
+   e. Switch airplane mode on and try the microphone: note whether the recognizer works offline on this phone.
+8. Then Phase 8 (Life Management): prayer, habits, money, study, wellness, journal. Check the master prompt for the exact scope first.
 
 ## Continuation prompt (paste into the next session)
 ```
 Lanjutkan proyek ASISTEN dari HANDOFF.md terbaru (jangan mulai ulang, jangan minta saya mengulang persyaratan).
-Status: kode Fase 1–6 sudah ditulis; logika murni dan klien HTTP Gemini terverifikasi (264 tes JVM lolos lewat tools/jvm-check.sh, pemeriksa statis tools/cek-statis.py bersih), tetapi build Android, alarm/notifikasi, dan chat Hanako belum pernah dijalankan di HP, dan belum ada permintaan nyata ke Gemini.
-Hasil GitHub Actions saya: <tempel log error, atau tulis "hijau, APK terpasang, semua pemeriksaan di langkah 4, 5 dan 6 berhasil" / sebutkan yang gagal, termasuk nama model yang ditolak atau jawaban Hanako yang salah>.
+Status: kode Fase 1–7 sudah ditulis; logika murni dan klien HTTP Gemini terverifikasi (286 tes JVM lolos lewat tools/jvm-check.sh, pemeriksa statis tools/cek-statis.py bersih), tetapi build Android, alarm/notifikasi, chat Hanako, dan suara belum pernah dijalankan di HP, dan belum ada permintaan nyata ke Gemini.
+Hasil GitHub Actions saya: <tempel log error, atau tulis "hijau, APK terpasang, semua pemeriksaan di langkah 4, 5, 6 dan 7 berhasil" / sebutkan yang gagal, termasuk nama model yang ditolak, suara yang tidak ada, atau jawaban Hanako yang salah>.
+Master prompt asli: <tempel bagian Fase 6 dan 7 (dan Fase 8–10) kalau ada yang belum tercakup>.
 Jika ada error: perbaiki penyebabnya secara minimal dan jelaskan, tanpa menambah fitur baru. Jika error KSP "kotlin.sourceSets DSL", tambahkan android.disallowKotlinSourceSets=false. Jika KlienGeminiTest tidak bisa dikompilasi di Gradle, hapus berkas tes itu dan catat.
-Jika hijau: kerjakan Fase 7 (suara: speech-to-text dan text-to-speech di atas chat Hanako) sesuai master prompt, lalu perbarui PROGRESS.md, HANDOFF.md, CHANGELOG.md dengan hasil tes yang nyata.
+Jika hijau: kerjakan Fase 8 (manajemen hidup) sesuai master prompt, lalu perbarui PROGRESS.md, HANDOFF.md, CHANGELOG.md dengan hasil tes yang nyata.
 ```

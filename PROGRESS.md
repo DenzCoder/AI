@@ -8,12 +8,12 @@
 | 4 | Schedule and Activities | Code written; domain logic verified (JVM); UI build **NOT verified**; supply checklist and OCR not done |
 | 5 | Alarm and Notifications | Code written; scheduling/policy logic verified (JVM); Android layer and UI build **NOT verified**; no on-device alarm test yet |
 | 6 | Hanako AI | Code written; chat/prompt/parsing/client logic verified (JVM, HTTP client against a loopback server); screens, Keystore and DataStore layer build **NOT verified**; never tried on a phone or against the real Gemini API |
-| 7 | Voice System | Not started |
+| 7 | Voice System | Code written; speech-text and settings logic verified (JVM); `TextToSpeech`, speech dialog and screens build **NOT verified**; never tried on a phone |
 | 8 | Life Management | Not started |
 | 9 | Intelligence and Cloud | Not started |
 | 10 | Final QA and APK | Not started |
 
-Verified so far: 264 JVM unit tests pass (`tools/jvm-check.sh`, Kotlin 2.0.21: domain, mappers and the Gemini HTTP client) and `tools/cek-statis.py` (resources, imports, manifest, Hanako images) is clean.
+Verified so far: 286 JVM unit tests pass (`tools/jvm-check.sh`, Kotlin 2.0.21: domain, mappers and the Gemini HTTP client) and `tools/cek-statis.py` (resources, imports, manifest, Hanako images) is clean.
 Not verified: Gradle/AGP build, KSP/Room, Compose, instrumented tests, on-device behavior. No APK exists.
 
 ## Phase 1 checklist
@@ -80,3 +80,14 @@ Not verified: Gradle/AGP build, KSP/Room, Compose, instrumented tests, on-device
 - [ ] First real request to Gemini, default model name `gemini-flash-latest` unverified
 - [ ] Phone checklist (HANDOFF.md, step 6)
 - [ ] Not in this phase: Hanako changing app data (function calling), streaming, voice (Phase 7), Supabase proxy (Phase 9)
+
+## Phase 7 checklist
+- [x] Microphone button: system speech dialog (Indonesian), text added to the input; no microphone permission needed
+- [x] Read aloud: speaker icon per Hanako reply, stop button, optional auto-read, Indonesian TextToSpeech
+- [x] Text cleaned for speech (times, lists, emoji, markdown, links), tested
+- [x] Voice settings (auto-read, speed, pitch, test) with an honest engine status and a link to install missing voice data
+- [x] Manifest `<queries>` for the TTS service and the recognizer
+- [ ] Build verification of `PembacaSuara`, the screens and `SuaraRepository` — pending CI (no independent review)
+- [ ] Phone checklist (HANDOFF.md, step 7)
+- [ ] Not in this phase: wake word / always listening, voice commands that change data, spoken reminders
+- [ ] Master prompt scope for Phases 6–7 not re-checked (its text was not available): compare and list gaps

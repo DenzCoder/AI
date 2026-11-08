@@ -12,9 +12,11 @@ import id.asisten.app.data.pengaturan.penyimpananPengaturan
 import id.asisten.app.data.repo.AktivitasRepository
 import id.asisten.app.data.repo.JadwalRepository
 import id.asisten.app.data.repo.MemoriRepository
+import id.asisten.app.data.suara.SuaraRepository
 import id.asisten.app.notifikasi.PekerjaPengaman
 import id.asisten.app.notifikasi.PenampilNotifikasi
 import id.asisten.app.notifikasi.PenjadwalPengingat
+import id.asisten.app.suara.PembacaSuara
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +37,8 @@ class WadahAplikasi(context: Context) {
     val aktivitas: AktivitasRepository by lazy { AktivitasRepository(database.tugasDao(), database.tujuanDao()) }
     val hanako: HanakoRepository by lazy { HanakoRepository(app.penyimpananPengaturan, PengacakKeystore()) }
     val klienGemini: KlienGemini by lazy { KlienGemini() }
+    val suara: SuaraRepository by lazy { SuaraRepository(app.penyimpananPengaturan) }
+    val pembaca: PembacaSuara by lazy { PembacaSuara(app) }
 
     val penampil: PenampilNotifikasi by lazy { PenampilNotifikasi(app) }
     val penjadwal: PenjadwalPengingat by lazy { PenjadwalPengingat(app, pengaturan, jadwal, aktivitas, penampil) }

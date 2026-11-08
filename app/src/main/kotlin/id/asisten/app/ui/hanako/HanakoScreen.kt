@@ -1,6 +1,12 @@
 package id.asisten.app.ui.hanako
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +40,7 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +48,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,6 +59,9 @@ import id.asisten.app.domain.hanako.LabelHanako
 import id.asisten.app.domain.hanako.PeranChat
 import id.asisten.app.domain.hanako.PesanChat
 import id.asisten.app.domain.hanako.PilihEkspresi
+import id.asisten.app.domain.suara.LabelSuara
+import id.asisten.app.domain.suara.PenyisipDiktean
+import id.asisten.app.domain.suara.StatusSuara
 import id.asisten.app.ui.wadahViewModel
 import java.time.LocalTime
 
@@ -61,7 +72,7 @@ import java.time.LocalTime
 @Composable
 fun HanakoScreen(modifier: Modifier = Modifier) {
     val vm = wadahViewModel {
-        HanakoViewModel(it.hanako, it.pengaturan, it.jadwal, it.aktivitas, it.memori, it.klienGemini)
+        HanakoViewModel(it.hanako, it.pengaturan, it.jadwal, it.aktivitas, it.memori, it.klienGemini, it.suara, it.pembaca)
     }
     var tampilPengaturan by rememberSaveable { mutableStateOf(false) }
     BackHandler(enabled = tampilPengaturan) { tampilPengaturan = false }
@@ -79,7 +90,44 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
     val pengaturan by vm.pengaturanHanako.collectAsStateWithLifecycle()
     val sedangMenjawab by vm.sedangMenjawab.collectAsStateWithLifecycle()
     val galat by vm.galat.collectAsStateWithLifecycle()
+    val sedangBicara by vm.sedangBicara.collectAsStateWithLifecycle()
     var teks by rememberSaveable { mutableStateOf("") }
+    var pesanSuara by rememberSaveable { mutableStateOf<String?>(null) }
+    val petunjukDiktean = stringResource(R.string.hanako_diktean_prompt)
+
+    // New replies are read aloud when the user switched that on; speech stops when the screen is left.
+    LaunchedEffect(Unit) {
+        vm.balasanBaru.collect { pesan -> if (vm.pengaturanSuara.value.bacaOtomatis) vm.bacaKeras(pesan.isi) }
+    }
+    DisposableEffect(Unit) { onDispose { vm.berhenti() } }
+    // The engine reports once whether Indonesian speech works; if it does not, say so under the chat.
+    val statusSuara by vm.statusSuara.collectAsStateWithLifecycle()
+    LaunchedEffect(statusSuara) {
+        val s = statusSuara
+        if (s != null && s != StatusSuara.SIAP) pesanSuara = LabelSuara.status(s)
+    }
+
+    // The system's own speech dialog does the listening (no microphone permission needed in this app).
+    val peluncurDiktean = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { hasil ->
+        if (hasil.resultCode == Activity.RESULT_OK) {
+            val dengar = PenyisipDiktean.pilihHasil(hasil.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS))
+            if (dengar == null) pesanSuara = LabelSuara.DIKTEAN_KOSONG else teks = PenyisipDiktean.gabung(teks, dengar)
+        }
+    }
+    val mulaiDiktean: () -> Unit = {
+        vm.berhenti()
+        pesanSuara = null
+        val maksud = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "id-ID")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, petunjukDiktean)
+        }
+        try {
+            peluncurDiktean.launch(maksud)
+        } catch (e: ActivityNotFoundException) {
+            pesanSuara = LabelSuara.DIKTEAN_TIDAK_ADA
+        }
+    }
 
     val online = pengaturan?.online == true
     val ekspresiTerakhir = riwayat.lastOrNull { it.peran == PeranChat.HANAKO }?.ekspresi
@@ -110,6 +158,11 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            if (sedangBicara) {
+                IconButton(onClick = { vm.berhenti() }) {
+                    Icon(painterResource(R.drawable.ic_berhenti), contentDescription = stringResource(R.string.hanako_berhenti_bicara))
+                }
+            }
             IconButton(onClick = onBukaPengaturan) {
                 Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.hanako_pengaturan_desc))
             }
@@ -125,7 +178,7 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    itemsIndexed(riwayat) { _, pesan -> BalonPesan(pesan) }
+                    itemsIndexed(riwayat) { _, pesan -> BalonPesan(pesan, onDengarkan = { vm.bacaKeras(pesan.isi) }) }
                     if (sedangMenjawab) item { BalonMenunggu() }
                 }
             }
@@ -144,6 +197,21 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
             )
         }
 
+        pesanSuara?.let { pesan ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = pesan,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { pesanSuara = null }) { Text(stringResource(R.string.hanako_tutup)) }
+            }
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.Bottom,
@@ -156,6 +224,9 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
                 maxLines = 4,
                 modifier = Modifier.weight(1f),
             )
+            IconButton(onClick = mulaiDiktean, enabled = !sedangMenjawab) {
+                Icon(painterResource(R.drawable.ic_mikrofon), contentDescription = stringResource(R.string.hanako_mikrofon))
+            }
             IconButton(
                 onClick = {
                     vm.kirim(teks)
@@ -200,7 +271,7 @@ private fun SapaanKosong(onSaran: (String) -> Unit) {
 }
 
 @Composable
-private fun BalonPesan(pesan: PesanChat) {
+private fun BalonPesan(pesan: PesanChat, onDengarkan: () -> Unit) {
     val dariPengguna = pesan.peran == PeranChat.PENGGUNA
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -219,6 +290,15 @@ private fun BalonPesan(pesan: PesanChat) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                 SelectionContainer {
                     Text(text = pesan.isi, style = MaterialTheme.typography.bodyLarge)
+                }
+                if (!dariPengguna) {
+                    IconButton(onClick = onDengarkan, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            painterResource(R.drawable.ic_suara),
+                            contentDescription = stringResource(R.string.hanako_dengarkan),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
                 if (pesan.lokal) {
                     Text(

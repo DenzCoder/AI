@@ -1,5 +1,8 @@
 package id.asisten.app.ui.hanako
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.speech.tts.TextToSpeech
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +23,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -36,6 +41,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.asisten.app.R
 import id.asisten.app.domain.hanako.LabelHanako
+import id.asisten.app.domain.suara.LabelSuara
+import id.asisten.app.domain.suara.PilihanSuara
+import id.asisten.app.ui.komponen.BarisPilihan
 import id.asisten.app.ui.komponen.DialogKonfirmasi
 import id.asisten.app.ui.komponen.JudulBagian
 import id.asisten.app.ui.komponen.JudulHalaman
@@ -50,6 +58,11 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
     val hasilUji by vm.hasilUji.collectAsStateWithLifecycle()
     val pesanKunci by vm.pesanKunci.collectAsStateWithLifecycle()
     val penanganUri = LocalUriHandler.current
+    val konteks = LocalContext.current
+    val pengaturanSuara by vm.pengaturanSuara.collectAsStateWithLifecycle()
+    val statusSuara by vm.statusSuara.collectAsStateWithLifecycle()
+    // Starting the speech engine tells us whether Indonesian is available; it is released when the chat is closed.
+    LaunchedEffect(Unit) { vm.periksaSuara() }
 
     // Not rememberSaveable on purpose: the key must not end up in the saved instance state.
     var kunciInput by remember { mutableStateOf("") }
@@ -189,6 +202,50 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
+            }
+        }
+
+        // --- voice ---
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            JudulBagian(stringResource(R.string.hanako_suara_judul))
+            TeksPetunjuk(stringResource(R.string.hanako_suara_ket))
+            BarisSakelar(
+                judul = stringResource(R.string.hanako_suara_otomatis),
+                keterangan = stringResource(R.string.hanako_suara_otomatis_ket),
+                nyala = pengaturanSuara.bacaOtomatis,
+                aktif = true,
+                onUbah = vm::ubahBacaOtomatis,
+            )
+            Text(stringResource(R.string.hanako_suara_kecepatan), style = MaterialTheme.typography.bodyLarge)
+            BarisPilihan(
+                opsi = PilihanSuara.KECEPATAN.map { it.first },
+                terpilih = PilihanSuara.terdekat(pengaturanSuara.kecepatan, PilihanSuara.KECEPATAN),
+                label = { v -> PilihanSuara.KECEPATAN.first { it.first == v }.second },
+                onPilih = vm::ubahKecepatan,
+            )
+            Text(stringResource(R.string.hanako_suara_nada), style = MaterialTheme.typography.bodyLarge)
+            BarisPilihan(
+                opsi = PilihanSuara.NADA.map { it.first },
+                terpilih = PilihanSuara.terdekat(pengaturanSuara.nada, PilihanSuara.NADA),
+                label = { v -> PilihanSuara.NADA.first { it.first == v }.second },
+                onPilih = vm::ubahNada,
+            )
+            statusSuara?.let { Text(LabelSuara.status(it), style = MaterialTheme.typography.bodyMedium) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { vm.bacaKeras(konteks.getString(R.string.hanako_suara_contoh)) }) {
+                    Text(stringResource(R.string.hanako_suara_uji))
+                }
+                if (statusSuara?.let { LabelSuara.bisaPasangData(it) } == true) {
+                    OutlinedButton(
+                        onClick = {
+                            try {
+                                konteks.startActivity(Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                            } catch (e: ActivityNotFoundException) {
+                                // No installer on this phone: the status text above already explains what is missing.
+                            }
+                        },
+                    ) { Text(stringResource(R.string.hanako_suara_pasang)) }
+                }
             }
         }
 

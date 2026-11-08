@@ -32,6 +32,11 @@
     <string name="hanako_buka_pengaturan">Buka pengaturan</string>
     <string name="hanako_tutup">Tutup</string>
 
+    <string name="hanako_mikrofon">Bicara untuk mengisi pesan</string>
+    <string name="hanako_diktean_prompt">Bicaralah sekarang</string>
+    <string name="hanako_dengarkan">Dengarkan balasan ini</string>
+    <string name="hanako_berhenti_bicara">Hentikan suara</string>
+
     <!-- Pengaturan Hanako -->
     <string name="hanako_kembali">Kembali</string>
     <string name="hanako_set_judul">Pengaturan Hanako</string>
@@ -61,6 +66,15 @@
     <string name="hanako_set_uji">Uji koneksi</string>
     <string name="hanako_set_uji_proses">Menguji…</string>
     <string name="hanako_set_uji_berhasil">Berhasil: Gemini menjawab.</string>
+    <string name="hanako_suara_judul">Suara</string>
+    <string name="hanako_suara_ket">Tombol mikrofon memakai pengenalan suara Google di ponselmu: biasanya butuh internet, dan audionya diproses oleh Google, bukan oleh aplikasi ini. Hanako berbicara memakai mesin suara bawaan ponsel. Aplikasi tidak mendengarkan terus-menerus; mikrofon hanya aktif saat kamu menekan tombolnya.</string>
+    <string name="hanako_suara_otomatis">Bacakan balasan otomatis</string>
+    <string name="hanako_suara_otomatis_ket">Setiap balasan baru Hanako langsung dibacakan. Matikan kalau kamu lebih suka menekan ikon pengeras suara sendiri.</string>
+    <string name="hanako_suara_kecepatan">Kecepatan bicara</string>
+    <string name="hanako_suara_nada">Nada suara</string>
+    <string name="hanako_suara_uji">Uji suara</string>
+    <string name="hanako_suara_contoh">Halo, aku Hanako. Beginilah suaraku.</string>
+    <string name="hanako_suara_pasang">Pasang data suara</string>
     <string name="hanako_set_riwayat">Percakapan</string>
     <string name="hanako_set_riwayat_ket">Percakapan disimpan di ponsel ini (maksimal 40 pesan terakhir).</string>
     <string name="hanako_set_hapus_riwayat">Hapus semua percakapan</string>
