@@ -5,6 +5,8 @@ enum class PeranChat { PENGGUNA, HANAKO }
 /**
  * One chat message. [ekspresi] is only set on Hanako's messages (her mood for that reply).
  * [lokal] is true when the offline responder wrote it instead of Gemini, so the screen can say so honestly.
+ * [aksi] is true for the app's own report of an approved or rejected change ("Sudah dilakukan: ..."), which the
+ * AI did not write and which is not read aloud. A message is never both [lokal] and [aksi].
  */
 data class PesanChat(
     val peran: PeranChat,
@@ -12,6 +14,7 @@ data class PesanChat(
     val ekspresi: EkspresiHanako? = null,
     val waktu: Long = 0L,
     val lokal: Boolean = false,
+    val aksi: Boolean = false,
 )
 
 object RiwayatChat {
@@ -45,16 +48,16 @@ object RiwayatChat {
 }
 
 /**
- * Stores the chat as text in DataStore: one message per line, `U|H`, expression name or `-`, time, `1|0` for
- * [PesanChat.lokal], then the text with `\`, line breaks and `|` escaped. Unreadable lines are skipped, never fatal.
+ * Stores the chat as text in DataStore: one message per line, `U|H`, expression name or `-`, time, a kind flag
+ * (`0` normal, `1` [PesanChat.lokal], `2` [PesanChat.aksi]), then the text with `\`, line breaks and `|` escaped. Unreadable lines are skipped, never fatal.
  */
 object RiwayatChatCodec {
 
     fun encode(daftar: List<PesanChat>): String = daftar.joinToString("\n") { p ->
         val peran = if (p.peran == PeranChat.PENGGUNA) "U" else "H"
         val ekspresi = p.ekspresi?.name ?: "-"
-        val lokal = if (p.lokal) "1" else "0"
-        "$peran|$ekspresi|${p.waktu}|$lokal|${lolos(p.isi)}"
+        val jenis = if (p.aksi) "2" else if (p.lokal) "1" else "0"
+        "$peran|$ekspresi|${p.waktu}|$jenis|${lolos(p.isi)}"
     }
 
     fun decode(teks: String?): List<PesanChat> {
@@ -72,7 +75,7 @@ object RiwayatChatCodec {
             val waktu = bagian[2].toLongOrNull() ?: continue
             val isi = bukaLolos(bagian[4])
             if (isi.isEmpty()) continue
-            hasil.add(PesanChat(peran, isi, ekspresi, waktu, bagian[3] == "1"))
+            hasil.add(PesanChat(peran, isi, ekspresi, waktu, lokal = bagian[3] == "1", aksi = bagian[3] == "2"))
         }
         return hasil.takeLast(RiwayatChat.MAKS_PESAN)
     }

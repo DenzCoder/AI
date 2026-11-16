@@ -9,8 +9,13 @@ data class PengaturanHanako(
     val bagikanData: Boolean = true,
     val model: String = NamaModel.BAWAAN,
     val adaKunci: Boolean = false,
+    /** Lets Hanako propose changes to the app (the user still approves each one). Only matters in online mode. */
+    val aksiAktif: Boolean = true,
 ) {
     val online: Boolean get() = onlineAktif && adaKunci
+
+    /** True when requests carry the function declarations, so Hanako can propose changes. */
+    val bisaMengusulkan: Boolean get() = online && aksiAktif
 }
 
 object NamaModel {

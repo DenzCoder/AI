@@ -17,11 +17,20 @@ object PenjawabLokal {
     private val KATA_TUJUAN = listOf("tujuan", "target", "cita", "goal")
     private val KATA_SAPA = listOf("halo", "hai", "hi", "hei", "hello", "selamat")
     private val KATA_TERIMA_KASIH = listOf("terima", "makasih", "thanks", "thx")
+    private val KATA_UBAH = listOf(
+        "tambah", "tambahkan", "ubah", "ganti", "hapus", "hapuskan", "atur", "aturkan", "ingatkan",
+        "pindah", "pindahkan", "geser", "batalkan", "buatkan", "bikin", "masukkan", "catatkan",
+        "tambahin", "hapusin", "ubahin", "gantiin", "aturin", "pindahin", "ingetin", "ingatin",
+    )
     private val KATA_SEMANGAT = listOf("semangat", "capek", "lelah", "malas", "males", "bosan", "stres", "stress")
 
     fun jawab(pertanyaan: String, latar: LatarHanako): BalasanLokal {
         val kata = pertanyaan.lowercase().split(Regex("[^a-z0-9]+")).filter { it.isNotEmpty() }
         fun cocok(daftar: List<String>) = kata.any { k -> daftar.any { d -> if (d.length <= 3) k == d else k.startsWith(d) } }
+
+        // A request to change something gets an honest explanation, not a list that ignores what was asked.
+        // Whole words only: "aturan" or "tambahan" are not requests to change anything.
+        if (kata.any { it in KATA_UBAH }) return BalasanLokal(PESAN_UBAH, EkspresiHanako.BINGUNG)
 
         val hariIni = latar.sekarang.toLocalDate()
         val bagian = ArrayList<String>()
@@ -71,6 +80,11 @@ object PenjawabLokal {
         // (LatarHanako.dataDibagikan) does not limit them: the caller passes the real data here.
         return BalasanLokal(bagian.joinToString("\n\n"), ekspresi)
     }
+
+    const val PESAN_UBAH =
+        "Di mode lokal aku belum bisa mengubah apa pun di aplikasi. Hubungkan kunci Gemini lewat ikon gerigi di atas " +
+            "dan nyalakan mode online, lalu aku bisa mengusulkan perubahannya untuk kamu setujui. " +
+            "Sementara itu kamu bisa mengubahnya sendiri di tab Jadwal atau Aktivitas, atau lewat Profil > Pengingat dan mode."
 
     private fun sapaan(latar: LatarHanako): String {
         val waktu = when (SapaanProvider.untuk(latar.sekarang.toLocalTime())) {

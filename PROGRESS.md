@@ -7,13 +7,13 @@
 | 3 | Local Database | Code written; domain/mapper logic verified (JVM); Room/DataStore build **NOT verified** |
 | 4 | Schedule and Activities | Code written; domain logic verified (JVM); UI build **NOT verified**; supply checklist and OCR not done |
 | 5 | Alarm and Notifications | Code written; scheduling/policy logic verified (JVM); Android layer and UI build **NOT verified**; no on-device alarm test yet |
-| 6 | Hanako AI | Code written; chat/prompt/parsing/client logic verified (JVM, HTTP client against a loopback server); screens, Keystore and DataStore layer build **NOT verified**; never tried on a phone or against the real Gemini API |
+| 6 | Hanako AI (+ actions, see below) | Code written; chat/prompt/parsing/client logic verified (JVM, HTTP client against a loopback server); screens, Keystore and DataStore layer build **NOT verified**; never tried on a phone or against the real Gemini API |
 | 7 | Voice System | Code written; speech-text and settings logic verified (JVM); `TextToSpeech`, speech dialog and screens build **NOT verified**; never tried on a phone |
 | 8 | Life Management | Not started |
 | 9 | Intelligence and Cloud | Not started |
 | 10 | Final QA and APK | Not started |
 
-Verified so far: 286 JVM unit tests pass (`tools/jvm-check.sh`, Kotlin 2.0.21: domain, mappers and the Gemini HTTP client) and `tools/cek-statis.py` (resources, imports, manifest, Hanako images) is clean.
+Verified so far: 409 JVM unit tests pass (`tools/jvm-check.sh`, Kotlin 2.0.21: domain, mappers and the Gemini HTTP client) and `tools/cek-statis.py` (resources, imports, manifest, Hanako images) is clean.
 Not verified: Gradle/AGP build, KSP/Room, Compose, instrumented tests, on-device behavior. No APK exists.
 
 ## Phase 1 checklist
@@ -91,3 +91,19 @@ Not verified: Gradle/AGP build, KSP/Room, Compose, instrumented tests, on-device
 - [ ] Phone checklist (HANDOFF.md, step 7)
 - [ ] Not in this phase: wake word / always listening, voice commands that change data, spoken reminders
 - [ ] Master prompt scope for Phases 6–7 not re-checked (its text was not available): compare and list gaps
+
+## Hanako actions checklist (added after Phase 7, 2026-11-16)
+User request: "Hanako belum bisa akses aplikasi, seperti atur alarm, ubah jadwal, dan lain-lain."
+- [x] Gemini function calling: Hanako PROPOSES add/change/delete of tasks, activities and timetable lessons, mark a task done, change reminder settings, start/end Fokus and Istirahat mode (13 functions)
+- [x] Nothing runs without the user: each proposal is a card with **Setujui** / **Tolak**; deletes are red, say "tidak bisa dibatalkan" and the button says "Setujui dan hapus"
+- [x] Every call is validated against the CURRENT data (ids must exist, dates/times/numbers range-checked, text cleaned, unknown function names refused) when it arrives, when it is shown and again when approved
+- [x] Approved edits are applied to the item as it is NOW, so changes the user made meanwhile are kept
+- [x] Alarms follow automatically: the Phase 5 observer re-arms them after any data or reminder-settings change
+- [x] Honest chat text: the app appends "Belum ada yang diubah" to any reply that carries proposals, and reports "Sudah dilakukan" / "Tidak jadi" / "Usulan dibatalkan" itself
+- [x] Settings switch "Izinkan Hanako mengusulkan perubahan" (default on); off = no function declarations are sent
+- [x] Local (offline) mode answers a change request honestly instead of listing data
+- [x] 123 new JVM tests (409 total) + 18 deliberate-bug checks, all detected
+- [ ] Build verification of the Android-only parts (`PelaksanaAksi`, `HanakoRepository` additions, `HanakoViewModel`, `HanakoScreen` cards) — pending CI, no independent review
+- [ ] Phone checklist (HANDOFF.md, step 8) and a real Gemini function-calling test (never done)
+- [ ] Not included: goals (tujuan) and memory actions, holiday/supply lists, bulk reschedule, "undo" after approval, spoken confirmation
+

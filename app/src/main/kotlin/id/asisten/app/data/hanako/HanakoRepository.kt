@@ -12,6 +12,8 @@ import id.asisten.app.domain.hanako.PengaturanHanako
 import id.asisten.app.domain.hanako.PesanChat
 import id.asisten.app.domain.hanako.RiwayatChat
 import id.asisten.app.domain.hanako.RiwayatChatCodec
+import id.asisten.app.domain.hanako.RiwayatUsulan
+import id.asisten.app.domain.hanako.UsulanMentah
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +29,8 @@ private object KunciHanako {
     val MODEL = stringPreferencesKey("hanako_model")
     val KUNCI_TERENKRIPSI = stringPreferencesKey("hanako_kunci_terenkripsi")
     val RIWAYAT = stringPreferencesKey("hanako_riwayat")
+    val AKSI_AKTIF = booleanPreferencesKey("hanako_aksi_aktif")
+    val USULAN = stringPreferencesKey("hanako_usulan")
 }
 
 /**
@@ -47,11 +51,16 @@ class HanakoRepository(
             bagikanData = p[KunciHanako.BAGIKAN_DATA] ?: true,
             model = p[KunciHanako.MODEL]?.takeIf { NamaModel.sah(it) } ?: NamaModel.BAWAAN,
             adaKunci = !p[KunciHanako.KUNCI_TERENKRIPSI].isNullOrEmpty(),
+            aksiAktif = p[KunciHanako.AKSI_AKTIF] ?: true,
         )
     }.distinctUntilChanged()
 
     val riwayat: Flow<List<PesanChat>> =
         data.map { RiwayatChatCodec.decode(it[KunciHanako.RIWAYAT]) }.distinctUntilChanged()
+
+    /** Proposals waiting for the user's decision (raw; the view model checks them against the current data). */
+    val usulan: Flow<List<UsulanMentah>> =
+        data.map { RiwayatUsulan.decode(it[KunciHanako.USULAN]) }.distinctUntilChanged()
 
     /** The decrypted key, or null when none is stored or it cannot be read (then the user must enter it again). */
     suspend fun kunci(): String? {
@@ -86,6 +95,10 @@ class HanakoRepository(
         penyimpanan.edit { it[KunciHanako.ONLINE_AKTIF] = aktif }
     }
 
+    suspend fun ubahAksi(aktif: Boolean) {
+        penyimpanan.edit { it[KunciHanako.AKSI_AKTIF] = aktif }
+    }
+
     suspend fun ubahBagikanData(bagikan: Boolean) {
         penyimpanan.edit { it[KunciHanako.BAGIKAN_DATA] = bagikan }
     }
@@ -104,7 +117,28 @@ class HanakoRepository(
         }
     }
 
+    /** Also drops old proposals. One `edit {}`, so it cannot race with [hapusUsulan]. */
+    suspend fun tambahUsulan(baru: List<UsulanMentah>, sekarang: Long) {
+        if (baru.isEmpty()) return
+        penyimpanan.edit { p ->
+            val lama = RiwayatUsulan.segar(RiwayatUsulan.decode(p[KunciHanako.USULAN]), sekarang)
+            p[KunciHanako.USULAN] = RiwayatUsulan.encode(RiwayatUsulan.tambah(lama, baru))
+        }
+    }
+
+    suspend fun hapusUsulan(id: Long) {
+        penyimpanan.edit { p ->
+            val sisa = RiwayatUsulan.hapus(RiwayatUsulan.decode(p[KunciHanako.USULAN]), id)
+            p.remove(KunciHanako.USULAN)
+            if (sisa.isNotEmpty()) p[KunciHanako.USULAN] = RiwayatUsulan.encode(sisa)
+        }
+    }
+
+    /** Clearing the conversation also clears the proposals that belong to it. */
     suspend fun hapusRiwayat() {
-        penyimpanan.edit { it.remove(KunciHanako.RIWAYAT) }
+        penyimpanan.edit {
+            it.remove(KunciHanako.RIWAYAT)
+            it.remove(KunciHanako.USULAN)
+        }
     }
 }

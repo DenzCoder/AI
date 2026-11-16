@@ -32,6 +32,48 @@ object MiniJson {
         return sb.toString()
     }
 
+    /**
+     * Writes a value read by [urai] (or built by hand from Map, List, String, Number, Boolean, null) as JSON text.
+     * Whole numbers are written without a decimal point, so an id read as 12.0 is written back as 12.
+     * Throws [IllegalArgumentException] for any other type, or for NaN or infinite numbers.
+     */
+    fun tulis(nilai: Any?): String = StringBuilder().also { tulisKe(it, nilai, 0) }.toString()
+
+    private fun tulisKe(sb: StringBuilder, nilai: Any?, kedalaman: Int) {
+        require(kedalaman <= KEDALAMAN_MAKS) { "JSON terlalu dalam" }
+        when (nilai) {
+            null -> sb.append("null")
+            is String -> sb.append(kutip(nilai))
+            is Boolean -> sb.append(nilai)
+            is Number -> {
+                val d = nilai.toDouble()
+                require(!d.isNaN() && !d.isInfinite()) { "Angka tidak sah" }
+                if (d == Math.rint(d) && Math.abs(d) < 1e15) sb.append(d.toLong()) else sb.append(d)
+            }
+            is Map<*, *> -> {
+                sb.append('{')
+                var pertama = true
+                for ((k, v) in nilai) {
+                    require(k is String) { "Kunci objek harus string" }
+                    if (!pertama) sb.append(',')
+                    pertama = false
+                    sb.append(kutip(k)).append(':')
+                    tulisKe(sb, v, kedalaman + 1)
+                }
+                sb.append('}')
+            }
+            is List<*> -> {
+                sb.append('[')
+                nilai.forEachIndexed { i, v ->
+                    if (i > 0) sb.append(',')
+                    tulisKe(sb, v, kedalaman + 1)
+                }
+                sb.append(']')
+            }
+            else -> throw IllegalArgumentException("Tipe tidak didukung: ${nilai.javaClass.simpleName}")
+        }
+    }
+
     /** Parses [teks]. Throws [JsonRusak] on malformed input or on nesting deeper than 64 levels. */
     fun urai(teks: String): Any? {
         val pembaca = Pembaca(teks)

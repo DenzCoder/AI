@@ -27,6 +27,11 @@
     <string name="hanako_kirim">Kirim</string>
     <string name="hanako_mengetik">Hanako sedang berpikir…</string>
     <string name="hanako_label_lokal">Jawaban lokal, tanpa internet</string>
+    <string name="hanako_label_aksi">Perubahan di aplikasi</string>
+    <string name="hanako_usulan_judul">Usulan Hanako, belum dijalankan</string>
+    <string name="hanako_setujui">Setujui</string>
+    <string name="hanako_tolak">Tolak</string>
+    <string name="hanako_usulan_hapus_setujui">Setujui dan hapus</string>
     <string name="hanako_rincian">Rincian dari server: %1$s</string>
     <string name="hanako_coba_lagi">Coba lagi</string>
     <string name="hanako_buka_pengaturan">Buka pengaturan</string>
@@ -57,6 +62,8 @@
     <string name="hanako_set_perilaku">Perilaku</string>
     <string name="hanako_set_online">Pakai AI online</string>
     <string name="hanako_set_online_ket">Matikan untuk memakai mode lokal tanpa internet. Perlu kunci.</string>
+    <string name="hanako_set_aksi">Izinkan Hanako mengusulkan perubahan</string>
+    <string name="hanako_set_aksi_ket">Hanako bisa mengusulkan menambah, mengubah, atau menghapus tugas, kegiatan, dan pelajaran, serta mengatur pengingat dan mode. Usulan tampil sebagai kartu dan baru dijalankan setelah kamu menekan Setujui. Hanya berlaku saat Hanako online. Kalau data aplikasi tidak dibagikan, Hanako hanya bisa mengusulkan menambah.</string>
     <string name="hanako_set_bagikan">Bagikan data aplikasi ke AI</string>
     <string name="hanako_set_bagikan_ket">Jadwal hari ini, tugas, tujuan, dan memori yang tidak ditandai sensitif. Memori sensitif tidak pernah dikirim, dan tidak ada yang dikirim kalau memori dimatikan di Profil.</string>
     <string name="hanako_set_model">Model</string>

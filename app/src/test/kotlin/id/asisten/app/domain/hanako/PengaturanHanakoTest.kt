@@ -59,4 +59,14 @@ class PengaturanHanakoTest {
         assertTrue(bersih.length <= KunciGemini.MAKS_PANJANG + 1)
         assertFalse(KunciGemini.masukAkal(bersih))
     }
+
+    @Test
+    fun bisaMengusulkanButuhOnlineDanSaklarAksi() {
+        val online = PengaturanHanako(onlineAktif = true, adaKunci = true)
+        assertTrue(online.bisaMengusulkan)
+        assertFalse(online.copy(aksiAktif = false).bisaMengusulkan)
+        assertFalse(online.copy(onlineAktif = false).bisaMengusulkan)
+        assertFalse(online.copy(adaKunci = false).bisaMengusulkan)
+        assertTrue(PengaturanHanako().aksiAktif)
+    }
 }

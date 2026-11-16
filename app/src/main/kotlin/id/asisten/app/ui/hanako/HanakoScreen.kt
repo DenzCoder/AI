@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.asisten.app.R
@@ -59,6 +62,7 @@ import id.asisten.app.domain.hanako.LabelHanako
 import id.asisten.app.domain.hanako.PeranChat
 import id.asisten.app.domain.hanako.PesanChat
 import id.asisten.app.domain.hanako.PilihEkspresi
+import id.asisten.app.domain.hanako.UsulanTampil
 import id.asisten.app.domain.suara.LabelSuara
 import id.asisten.app.domain.suara.PenyisipDiktean
 import id.asisten.app.domain.suara.StatusSuara
@@ -72,7 +76,9 @@ import java.time.LocalTime
 @Composable
 fun HanakoScreen(modifier: Modifier = Modifier) {
     val vm = wadahViewModel {
-        HanakoViewModel(it.hanako, it.pengaturan, it.jadwal, it.aktivitas, it.memori, it.klienGemini, it.suara, it.pembaca)
+        HanakoViewModel(
+            it.hanako, it.pengaturan, it.jadwal, it.aktivitas, it.memori, it.klienGemini, it.suara, it.pembaca, it.pelaksanaAksi,
+        )
     }
     var tampilPengaturan by rememberSaveable { mutableStateOf(false) }
     BackHandler(enabled = tampilPengaturan) { tampilPengaturan = false }
@@ -91,6 +97,8 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
     val sedangMenjawab by vm.sedangMenjawab.collectAsStateWithLifecycle()
     val galat by vm.galat.collectAsStateWithLifecycle()
     val sedangBicara by vm.sedangBicara.collectAsStateWithLifecycle()
+    val usulan by vm.usulan.collectAsStateWithLifecycle()
+    val sedangMelaksanakan by vm.sedangMelaksanakan.collectAsStateWithLifecycle()
     var teks by rememberSaveable { mutableStateOf("") }
     var pesanSuara by rememberSaveable { mutableStateOf<String?>(null) }
     val petunjukDiktean = stringResource(R.string.hanako_diktean_prompt)
@@ -130,11 +138,11 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
     }
 
     val online = pengaturan?.online == true
-    val ekspresiTerakhir = riwayat.lastOrNull { it.peran == PeranChat.HANAKO }?.ekspresi
+    val ekspresiTerakhir = riwayat.lastOrNull { it.peran == PeranChat.HANAKO && !it.aksi }?.ekspresi
     val ekspresi = PilihEkspresi.untukChat(sedangMenjawab, galat?.jenis, ekspresiTerakhir, LocalTime.now())
 
     val daftar = rememberLazyListState()
-    val jumlahItem = riwayat.size + if (sedangMenjawab) 1 else 0
+    val jumlahItem = riwayat.size + usulan.size + if (sedangMenjawab) 1 else 0
     LaunchedEffect(jumlahItem) {
         if (jumlahItem > 0) daftar.animateScrollToItem(jumlahItem - 1)
     }
@@ -169,7 +177,7 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
         }
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            if (riwayat.isEmpty() && !sedangMenjawab) {
+            if (riwayat.isEmpty() && usulan.isEmpty() && !sedangMenjawab) {
                 SapaanKosong(onSaran = { vm.kirim(it) })
             } else {
                 LazyColumn(
@@ -179,6 +187,14 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     itemsIndexed(riwayat) { _, pesan -> BalonPesan(pesan, onDengarkan = { vm.bacaKeras(pesan.isi) }) }
+                    items(usulan, key = { it.id }) { u ->
+                        KartuUsulan(
+                            usulan = u,
+                            sibuk = sedangMelaksanakan,
+                            onSetujui = { vm.setujui(u.id) },
+                            onTolak = { vm.tolak(u.id) },
+                        )
+                    }
                     if (sedangMenjawab) item { BalonMenunggu() }
                 }
             }
@@ -284,14 +300,26 @@ private fun BalonPesan(pesan: PesanChat, onDengarkan: () -> Unit) {
         }
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = if (dariPengguna) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+            color = when {
+                dariPengguna -> MaterialTheme.colorScheme.primaryContainer
+                pesan.aksi -> MaterialTheme.colorScheme.surfaceVariant
+                else -> MaterialTheme.colorScheme.secondaryContainer
+            },
             modifier = Modifier.widthIn(max = 300.dp),
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                 SelectionContainer {
                     Text(text = pesan.isi, style = MaterialTheme.typography.bodyLarge)
                 }
-                if (!dariPengguna) {
+                if (pesan.aksi) {
+                    Text(
+                        text = stringResource(R.string.hanako_label_aksi),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                if (!dariPengguna && !pesan.aksi) {
                     IconButton(onClick = onDengarkan, modifier = Modifier.size(32.dp)) {
                         Icon(
                             painterResource(R.drawable.ic_suara),
@@ -308,6 +336,49 @@ private fun BalonPesan(pesan: PesanChat, onDengarkan: () -> Unit) {
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * A change Hanako proposes. Nothing has happened yet: it only runs when the user taps Setujui. Deleting is shown in
+ * the error colours and the button says what it does.
+ */
+@Composable
+private fun KartuUsulan(usulan: UsulanTampil, sibuk: Boolean, onSetujui: () -> Unit, onTolak: () -> Unit) {
+    val hapus = usulan.aksi.destruktif
+    val wadah = if (hapus) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer
+    val isi = if (hapus) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = wadah, contentColor = isi)) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = stringResource(R.string.hanako_usulan_judul),
+                style = MaterialTheme.typography.labelMedium,
+                color = isi,
+            )
+            SelectionContainer {
+                Text(text = usulan.ringkas, style = MaterialTheme.typography.bodyLarge, color = isi)
+            }
+            usulan.peringatan.forEach { w ->
+                Text(text = w, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = isi)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Button(
+                    onClick = onSetujui,
+                    enabled = !sibuk,
+                    colors = if (hapus) {
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                        )
+                    } else {
+                        ButtonDefaults.buttonColors()
+                    },
+                ) {
+                    Text(stringResource(if (hapus) R.string.hanako_usulan_hapus_setujui else R.string.hanako_setujui))
+                }
+                OutlinedButton(onClick = onTolak, enabled = !sibuk) { Text(stringResource(R.string.hanako_tolak)) }
             }
         }
     }

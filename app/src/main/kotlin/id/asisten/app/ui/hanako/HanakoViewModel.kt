@@ -4,27 +4,39 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import id.asisten.app.data.ai.KlienGemini
 import id.asisten.app.data.hanako.HanakoRepository
+import id.asisten.app.data.hanako.HasilPelaksanaan
+import id.asisten.app.data.hanako.PelaksanaAksi
 import id.asisten.app.data.pengaturan.PengaturanRepository
 import id.asisten.app.data.repo.AktivitasRepository
 import id.asisten.app.data.repo.JadwalRepository
 import id.asisten.app.data.repo.MemoriRepository
 import id.asisten.app.data.suara.SuaraRepository
+import id.asisten.app.domain.hanako.BalasanAksi
+import id.asisten.app.domain.hanako.DataSaatIni
 import id.asisten.app.domain.hanako.EkspresiHanako
 import id.asisten.app.domain.hanako.HasilGemini
+import id.asisten.app.domain.hanako.HasilUrai
 import id.asisten.app.domain.hanako.JenisGalat
 import id.asisten.app.domain.hanako.KonteksHanako
+import id.asisten.app.domain.hanako.LabelAksi
 import id.asisten.app.domain.hanako.LatarHanako
+import id.asisten.app.domain.hanako.PanggilanFungsi
 import id.asisten.app.domain.hanako.PengaturanHanako
 import id.asisten.app.domain.hanako.PenjawabLokal
 import id.asisten.app.domain.hanako.PermintaanGemini
 import id.asisten.app.domain.hanako.PeranChat
 import id.asisten.app.domain.hanako.PesanChat
 import id.asisten.app.domain.hanako.RiwayatChat
+import id.asisten.app.domain.hanako.RiwayatUsulan
+import id.asisten.app.domain.hanako.UraiAksi
 import id.asisten.app.domain.hanako.UraiBalasan
+import id.asisten.app.domain.hanako.UsulanMentah
+import id.asisten.app.domain.hanako.UsulanTampil
 import id.asisten.app.domain.jadwal.PenyusunHarian
 import id.asisten.app.domain.memori.KonteksAi
 import id.asisten.app.domain.suara.PengaturanSuara
 import id.asisten.app.suara.PembacaSuara
+import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -34,9 +46,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** A failed request, kept on screen with the user's message so "Coba lagi" can resend it. */
 data class GalatChat(val jenis: JenisGalat, val rinci: String = "")
@@ -58,6 +73,7 @@ class HanakoViewModel(
     private val klien: KlienGemini,
     private val suara: SuaraRepository,
     private val pembaca: PembacaSuara,
+    private val pelaksana: PelaksanaAksi,
 ) : ViewModel() {
 
     val riwayat: StateFlow<List<PesanChat>> =
@@ -66,6 +82,22 @@ class HanakoViewModel(
     /** Null until the first read from storage, so the screen never flashes default values. */
     val pengaturanHanako: StateFlow<PengaturanHanako?> =
         hanako.pengaturan.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /**
+     * Changes Hanako proposed and the user has not decided on yet. Rebuilt whenever the data changes, so a proposal
+     * that no longer makes sense (the task was deleted, the date passed) disappears by itself.
+     */
+    val usulan: StateFlow<List<UsulanTampil>> = combine(
+        hanako.usulan, aktivitas.tugas, jadwal.kegiatan, jadwal.pelajaran, pengaturan.pengingat,
+    ) { mentah, tugas, kegiatan, pelajaran, pengingat ->
+        val sekarang = System.currentTimeMillis()
+        val data = DataSaatIni(LocalDate.now(), tugas, kegiatan, pelajaran, pengingat, sekarang)
+        RiwayatUsulan.tampil(RiwayatUsulan.segar(mentah, sekarang), data)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val kunciAksi = Mutex()
+    private val _sedangMelaksanakan = MutableStateFlow(false)
+    val sedangMelaksanakan: StateFlow<Boolean> = _sedangMelaksanakan.asStateFlow()
 
     private val _sedangMenjawab = MutableStateFlow(false)
     val sedangMenjawab: StateFlow<Boolean> = _sedangMenjawab.asStateFlow()
@@ -137,18 +169,20 @@ class HanakoViewModel(
                 _galat.value = GalatChat(JenisGalat.TANPA_KUNCI)
                 return
             }
-            val latar = kumpulkanLatar(bagikan = p.bagikanData, ikutkanMemori = true)
-            val badan = PermintaanGemini.badan(KonteksHanako.sistem(latar), hanako.riwayat.first())
+            val bisaMengusulkan = p.bisaMengusulkan
+            val latar = kumpulkanLatar(bagikan = p.bagikanData, ikutkanMemori = true, aksi = bisaMengusulkan)
+            val badan = PermintaanGemini.badan(KonteksHanako.sistem(latar), hanako.riwayat.first(), alat = bisaMengusulkan)
             when (val hasil = klien.kirim(kunci, p.model, badan)) {
                 is HasilGemini.Gagal -> _galat.value = GalatChat(hasil.jenis, hasil.rinci)
                 is HasilGemini.Berhasil -> {
                     val b = UraiBalasan.urai(hasil.teks)
-                    if (b.teks.isEmpty()) {
+                    val ekspresi = b.ekspresi ?: EkspresiHanako.NORMAL
+                    if (bisaMengusulkan && hasil.panggilan.isNotEmpty()) {
+                        simpanUsulan(b.teks, hasil.panggilan, ekspresi)
+                    } else if (b.teks.isEmpty()) {
                         _galat.value = GalatChat(JenisGalat.KOSONG)
                     } else {
-                        simpanBalasan(
-                            PesanChat(PeranChat.HANAKO, b.teks, b.ekspresi ?: EkspresiHanako.NORMAL, System.currentTimeMillis()),
-                        )
+                        simpanBalasan(PesanChat(PeranChat.HANAKO, b.teks, ekspresi, System.currentTimeMillis()))
                     }
                 }
             }
@@ -157,6 +191,87 @@ class HanakoViewModel(
         } catch (e: Exception) {
             _galat.value = GalatChat(JenisGalat.TIDAK_DIKENAL, e.javaClass.simpleName)
         }
+    }
+
+    /**
+     * The model asked for changes. Each call is checked (UraiAksi) and the valid ones are stored as proposals; nothing
+     * is changed until the user taps Setujui. The chat text always says so, whatever the model wrote.
+     */
+    private suspend fun simpanUsulan(teksModel: String, panggilan: List<PanggilanFungsi>, ekspresi: EkspresiHanako) {
+        val data = pelaksana.dataSaatIni()
+        val susun = BalasanAksi.susun(teksModel, panggilan, data)
+        val sekarang = System.currentTimeMillis()
+        val ada = hanako.usulan.first()
+        val baru = ArrayList<UsulanMentah>()
+        for (c in susun.disimpan) {
+            val id = RiwayatUsulan.idBaru(ada + baru, sekarang)
+            RiwayatUsulan.mentah(id, sekarang, c)?.let { baru.add(it) }
+        }
+        hanako.tambahUsulan(baru, sekarang)
+        simpanBalasan(PesanChat(PeranChat.HANAKO, susun.teks, ekspresi, sekarang))
+    }
+
+    // --- the user's decision on a proposal ---
+
+    fun setujui(id: Long) = putuskan(id, setuju = true)
+
+    fun tolak(id: Long) = putuskan(id, setuju = false)
+
+    private fun putuskan(id: Long, setuju: Boolean) {
+        viewModelScope.launch {
+            // The lock also stops a double tap from running the same proposal twice: the second call finds it gone.
+            kunciAksi.withLock {
+                val mentah = hanako.usulan.first().firstOrNull { it.id == id } ?: return@withLock
+                _sedangMelaksanakan.value = true
+                try {
+                    prosesKeputusan(mentah, setuju)
+                } catch (e: CancellationException) {
+                    throw e
+                } finally {
+                    _sedangMelaksanakan.value = false
+                }
+            }
+        }
+    }
+
+    private suspend fun prosesKeputusan(mentah: UsulanMentah, setuju: Boolean) {
+        val data = pelaksana.dataSaatIni()
+        val panggilan = RiwayatUsulan.panggilan(mentah)
+        val hasil = panggilan?.let { UraiAksi.urai(it, data) }
+        if (hasil !is HasilUrai.Sah) {
+            hanako.hapusUsulan(mentah.id)
+            laporkan(LabelAksi.laporTidakBerlaku((hasil as? HasilUrai.Tidak)?.alasan ?: "Isinya tidak terbaca."))
+            return
+        }
+        val aksi = hasil.aksi
+        val ringkas = LabelAksi.ringkas(aksi, data)
+        if (!setuju) {
+            hanako.hapusUsulan(mentah.id)
+            laporkan(LabelAksi.laporTolak(ringkas))
+            return
+        }
+        try {
+            when (val h = pelaksana.jalankan(aksi, data)) {
+                HasilPelaksanaan.Berhasil -> {
+                    hanako.hapusUsulan(mentah.id)
+                    laporkan(LabelAksi.laporSetuju(ringkas))
+                }
+                is HasilPelaksanaan.Gagal -> {
+                    hanako.hapusUsulan(mentah.id)
+                    laporkan(LabelAksi.laporGagal(ringkas, h.alasan))
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // The proposal stays on screen so the user can try again.
+            laporkan(LabelAksi.laporError(ringkas))
+        }
+    }
+
+    /** The app's own report in the chat (not written by the AI, not read aloud). */
+    private suspend fun laporkan(teks: String) {
+        hanako.tambahPesan(PesanChat(PeranChat.HANAKO, teks, waktu = System.currentTimeMillis(), aksi = true))
     }
 
     /** Stores Hanako's reply and announces it, so the screen can read it aloud when that is switched on. */
@@ -169,12 +284,15 @@ class HanakoViewModel(
      * Reads the current data. With [bagikan] false the lists stay empty and the prompt says nothing is shared.
      * Memories pass through [KonteksAi.pilih]: none when memory is off, and sensitive ones never.
      */
-    private suspend fun kumpulkanLatar(bagikan: Boolean, ikutkanMemori: Boolean): LatarHanako {
+    private suspend fun kumpulkanLatar(bagikan: Boolean, ikutkanMemori: Boolean, aksi: Boolean = false): LatarHanako {
         val sekarang = LocalDateTime.now()
         val profil = pengaturan.profil.first()
-        val mode = pengaturan.pengingat.first().modeEfektif(System.currentTimeMillis())
+        val pengingat = pengaturan.pengingat.first()
+        val mode = pengingat.modeEfektif(System.currentTimeMillis())
         if (!bagikan) {
-            return LatarHanako(namaPengguna = profil.nama, sekarang = sekarang, mode = mode, dataDibagikan = false)
+            return LatarHanako(
+                namaPengguna = profil.nama, sekarang = sekarang, mode = mode, dataDibagikan = false, aksiAktif = aksi,
+            )
         }
         val memoriDipilih = if (ikutkanMemori) KonteksAi.pilih(memori.semua.first(), profil.memoriAktif) else emptyList()
         return LatarHanako(
@@ -185,6 +303,10 @@ class HanakoViewModel(
             tujuanAktif = aktivitas.tujuan.first(),
             memori = memoriDipilih,
             mode = mode,
+            kegiatan = if (aksi) jadwal.kegiatan.first() else emptyList(),
+            pelajaran = if (aksi) jadwal.pelajaran.first() else emptyList(),
+            pengingat = pengingat,
+            aksiAktif = aksi,
         )
     }
 
@@ -211,6 +333,10 @@ class HanakoViewModel(
 
     fun ubahOnline(aktif: Boolean) {
         viewModelScope.launch { hanako.ubahOnline(aktif) }
+    }
+
+    fun ubahAksi(aktif: Boolean) {
+        viewModelScope.launch { hanako.ubahAksi(aktif) }
     }
 
     fun ubahBagikanData(bagikan: Boolean) {

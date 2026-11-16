@@ -160,6 +160,13 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
                 onUbah = vm::ubahOnline,
             )
             BarisSakelar(
+                judul = stringResource(R.string.hanako_set_aksi),
+                keterangan = stringResource(R.string.hanako_set_aksi_ket),
+                nyala = p.aksiAktif,
+                aktif = true,
+                onUbah = vm::ubahAksi,
+            )
+            BarisSakelar(
                 judul = stringResource(R.string.hanako_set_bagikan),
                 keterangan = stringResource(R.string.hanako_set_bagikan_ket),
                 nyala = p.bagikanData,

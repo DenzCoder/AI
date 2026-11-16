@@ -17,7 +17,11 @@ enum class JenisGalat {
 }
 
 sealed interface HasilGemini {
-    data class Berhasil(val teks: String) : HasilGemini
+    /**
+     * [teks] may be empty when the model only asked for changes ([panggilan]). A reply always has text or calls.
+     * The calls are proposals; nothing in them has been done.
+     */
+    data class Berhasil(val teks: String, val panggilan: List<PanggilanFungsi> = emptyList()) : HasilGemini
 
     /** [rinci] is the (shortened) message the server sent, shown in small print for troubleshooting. */
     data class Gagal(val jenis: JenisGalat, val rinci: String = "") : HasilGemini
@@ -27,20 +31,28 @@ sealed interface HasilGemini {
 object PermintaanGemini {
     const val SUHU = 0.8
 
+    /** Lower when the model may call functions: dates and ids must be exact, not creative. */
+    const val SUHU_ALAT = 0.4
+
     /**
      * Thinking models spend part of this budget on reasoning before they write the answer, so it is generous.
      * The system prompt asks for short replies, so answers stay short anyway.
      */
     const val MAKS_TOKEN = 2048
 
-    fun badan(sistem: String, riwayat: List<PesanChat>, maksToken: Int = MAKS_TOKEN): String {
+    /**
+     * [alat] adds the function declarations of [DeklarasiAksi], so the model can propose changes to the app.
+     * Plain chat tests (like the connection test) leave it off.
+     */
+    fun badan(sistem: String, riwayat: List<PesanChat>, maksToken: Int = MAKS_TOKEN, alat: Boolean = false): String {
         val isi = RiwayatChat.untukModel(riwayat).joinToString(",") { p ->
             val peran = if (p.peran == PeranChat.PENGGUNA) "user" else "model"
             """{"role":"$peran","parts":[{"text":${MiniJson.kutip(p.isi)}}]}"""
         }
         return """{"systemInstruction":{"parts":[{"text":${MiniJson.kutip(sistem)}}]},""" +
             """"contents":[$isi],""" +
-            """"generationConfig":{"temperature":$SUHU,"maxOutputTokens":$maksToken}}"""
+            (if (alat) """"tools":${DeklarasiAksi.json()},""" else "") +
+            """"generationConfig":{"temperature":${if (alat) SUHU_ALAT else SUHU},"maxOutputTokens":$maksToken}}"""
     }
 }
 
@@ -64,7 +76,15 @@ object UraiResponsGemini {
             val peta = b as? Map<*, *> ?: return@mapNotNull null
             if (peta["thought"] == true) null else peta["text"] as? String
         }.joinToString("").trim()
-        if (teks.isNotEmpty()) return HasilGemini.Berhasil(teks)
+        val panggilan = bagian.mapNotNull { b ->
+            val panggil = (b as? Map<*, *>)?.get("functionCall") as? Map<*, *> ?: return@mapNotNull null
+            val nama = panggil["name"] as? String ?: return@mapNotNull null
+            val args = (panggil["args"] as? Map<*, *>)
+                ?.entries?.filter { it.key is String }?.associate { it.key as String to it.value }
+                ?: emptyMap()
+            PanggilanFungsi(nama, args)
+        }
+        if (teks.isNotEmpty() || panggilan.isNotEmpty()) return HasilGemini.Berhasil(teks, panggilan)
 
         val selesai = MiniJson.ambil(json, "candidates", 0, "finishReason") as? String
         return if (selesai != null && selesai in ALASAN_DIBLOKIR) {

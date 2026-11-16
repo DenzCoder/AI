@@ -1,9 +1,9 @@
-# HANDOFF — after Phase 7 (Voice)
+# HANDOFF — after Phase 7 (Voice) + Hanako actions
 
-Last updated: 2026-11-08
+Last updated: 2026-11-16
 
 ## Status in one line
-Phases 1–7 source code is written. The **pure logic and the Gemini HTTP client are verified** (286 JVM unit tests pass, the HTTP client against a real loopback server) and the static checks are clean. The **Android build has never run** (Gradle, KSP/Room, Compose, DataStore, WorkManager, Keystore, TextToSpeech, speech dialog, instrumented tests, device): the authoring sandbox cannot reach Gradle/Maven (re-probed 2026-11-08, still HTTP 000). **Phase 5 alarms, the Phase 6 chat and the Phase 7 voice have never been seen on a device, and no request has ever been sent to the real Gemini API.**
+Phases 1–7 source code is written, plus **Hanako actions** (she can propose changes to the app; added 2026-11-16 after the user said Hanako "cannot access the app yet"). The **pure logic and the Gemini HTTP client are verified** (409 JVM unit tests pass, the HTTP client against a real loopback server) and the static checks are clean. The **Android build has never run** (Gradle, KSP/Room, Compose, DataStore, WorkManager, Keystore, TextToSpeech, speech dialog, instrumented tests, device): the authoring sandbox cannot reach Gradle/Maven (re-probed 2026-11-08, still HTTP 000). **Phase 5 alarms, the Phase 6 chat and the Phase 7 voice have never been seen on a device, and no request has ever been sent to the real Gemini API.**
 
 Why work continued without a green build: an earlier note said to wait for a green GitHub Actions build. The user answered "Lanjutkan" repeatedly without a build report, so Phases 6 and 7 were written, each in small isolated files (nothing in Phases 1–5 was rewritten, only wired up). Three phases of unbuilt code now stack up: if the first CI run fails, fix compile errors first and add no features.
 
@@ -13,6 +13,17 @@ Why work continued without a green build: an earlier note said to wait for a gre
 Part of Phases 3/4 (domain, data layer, repositories, ViewModels, most unit tests, `tools/jvm-check.sh`) was written in an earlier working session whose conversation was not available to the session that finished them. Five files from that earlier work were accidentally overwritten and then reconstructed (`domain/memori/Memori.kt`, `domain/dasbor/TataLetakCodec.kt`, the three Gradle files); `Pengaturan.kt` was restored from git. Details were in the Phase 3/4 handoff; after the repair all tests passed, so the reconstruction is consistent. Phase 5 and the Hanako work were written in one session and did not touch those files except to add to the Gradle files and to `PengaturanRepository.kt`.
 
 ## Completed work
+
+### Hanako actions — she can propose changes to the app (2026-11-16)
+The user reported that build, features and AI were fine (no log was pasted, so this is an unverified report) and asked for Hanako to be able to "access the app: set alarms, change the schedule and so on". Implemented as **proposals the user approves**, never as silent changes.
+- **How it works**: with a Gemini key, online mode and the switch "Izinkan Hanako mengusulkan perubahan" (default on), every chat request carries 13 function declarations (`DeklarasiAksi`): `tambah_tugas`, `ubah_tugas`, `tandai_tugas`, `hapus_tugas`, `tambah_kegiatan`, `ubah_kegiatan`, `hapus_kegiatan`, `tambah_pelajaran`, `ubah_pelajaran`, `hapus_pelajaran`, `atur_pengingat`, `mulai_mode`, `akhiri_mode`. When Gemini answers with function calls, `UraiAksi` validates each one against the CURRENT data; valid ones are stored as proposals (`RiwayatUsulan`, DataStore, max 10, 24 h) and shown as cards under the chat with **Setujui** / **Tolak**. Only Setujui executes anything.
+- **"Set an alarm"**: the app has no free-standing alarms. Reminders ring N minutes before an activity or a task's due time (Phase 5). So "ingatkan aku jam 7" becomes a proposed activity starting at 07:00, the card/prompt explains that the reminder rings per the reminder settings (default 10 min before), and Hanako can also propose `atur_pengingat` (for example 0 minutes before). After any approved change the Phase 5 observer re-arms the alarms by itself.
+- **Safety rules (all unit-tested)**: unknown function names refused; ids must exist now (the prompt lists ids; break slots cannot be addressed); dates ISO and within one year back / three years ahead, a new one-time activity may not be in the past; times 24 h and end after start; numbers range-checked (lead times 0–720, snooze 1–120, mode 1–480 min); text cleaned (control and zero-width characters removed) and length-limited (title 100, others 60, notes 300); no-op changes refused; at most 5 proposals per reply; identical pending proposals are not stacked; an edit is applied to the item as it is at approval time (`PerencanaAksi`), so edits the user made meanwhile survive; a proposal that no longer makes sense disappears; deleting is flagged red + "tidak bisa dibatalkan" + "Setujui dan hapus".
+- **Honest chat**: the app itself appends "Belum ada yang diubah. Cek kartu usulan di bawah…" to any reply with proposals (whatever the model wrote) and posts "Sudah dilakukan / Tidak jadi / Usulan dibatalkan" reports (flag `PesanChat.aksi`, not read aloud, labelled "Perubahan di aplikasi").
+- **Privacy**: ids and the reminder summary are in the prompt only when "Bagikan data" is on (same flag and same filters as before; notes of tasks are not sent). With sharing off Hanako can only propose additions.
+- **Offline (local) mode** never changes anything and says so when asked to ("tambah tugas…").
+- **Not included**: actions for goals (tujuan) and memories, undo after approval, spoken confirmation, bulk reschedule, holiday/supply lists.
+- **Never tried against the real Gemini API**: whether the model follows the schema and the rules is unknown. The temperature is 0.4 when functions are declared (0.8 otherwise). If proposals come out wrong, first tune the rules text in `KonteksHanako.ATURAN_AKSI` and the descriptions in `DeklarasiAksi`; the parser stays strict.
 
 ### Phase 5 — Alarms and notifications
 - **Pure logic** (`domain/pengingat/`, tested): `PenghitungPengingat` lists the reminders that fire in a time window; `ProsesPengingat` decides what is due now and when the next alarm is; `KebijakanNotifikasi` decides sound or silent; `PenyusunNotifikasi` builds the Indonesian text from CURRENT data (a deleted, completed or moved item yields nothing, so an old alarm or snooze can never announce something stale); `TundaCodec` stores snoozes; `PengaturanPengingat` holds the settings and clamps bad stored values.
@@ -56,14 +67,18 @@ Part of Phases 3/4 (domain, data layer, repositories, ViewModels, most unit test
 ### Earlier phases (unchanged)
 Phases 1–4: Room v1 (all tables), DataStore settings/profile/layout, onboarding, Memori Hanako, Jadwal (day/week/month, conflicts, school hours/timetable/duty), Aktivitas (tasks, goals, milestones, history), dashboard cards with real data. See CHANGELOG.md.
 
-## Current project structure (new or changed in Phases 5, 6 and 7)
+## Current project structure (new or changed in Phases 5, 6 and 7 and the Hanako actions)
 ```
 app/src/main/kotlin/id/asisten/app/
   AsistenAplikasi.kt *              container (+ hanako, klienGemini) + mulaiPengingat() (channels, worker, startup catch-up, edit observer)
   MainActivity.kt *                 opens the tab requested by a notification (singleTop + onNewIntent)
   domain/pengingat/                 Pengingat, PengaturanPengingat, Kebijakan, PenghitungPengingat(+ProsesPengingat),
                                     PenyusunNotifikasi, LabelPengingat   (pure, tested)
-  domain/hanako/                    EkspresiHanako (+PilihEkspresi), MiniJson, PercakapanHanako (messages, history, codec),
+  domain/hanako/ (actions)          AksiHanako (+Perubahan*, terapkan, UsulanTampil/Mentah), UraiAksi (validation), DeklarasiAksi (Gemini
+                                    function declarations), LabelAksi (card text, warnings, chat reports), PerencanaAksi (approved action ->
+                                    concrete step), UsulanHanako (RiwayatUsulan storage codec, BalasanAksi)   (pure, tested)
+  data/hanako/PelaksanaAksi.kt      executes a step through the existing repositories (Android layer, not compiled here)
+  domain/hanako/                    EkspresiHanako (+PilihEkspresi), MiniJson (+tulis), PercakapanHanako (messages, history, codec),
                                     ProtokolGemini (request body, response parser, error kinds, mood marker),
                                     KonteksHanako (persona prompt + RingkasData), PenjawabLokal, LabelHanako,
                                     PengaturanHanako (+NamaModel, KunciGemini)   (pure, tested)
@@ -104,6 +119,8 @@ docs/referensi/hanako-lembar-karakter.png
 24. **TTS is released when the chat ViewModel is cleared** and stops when the screen is left, so the engine does not stay bound in memory on a 4 GB phone.
 
 ## Tests performed and their REAL results
+- **Hanako actions (2026-11-16)**: `tools/jvm-check.sh` **OK (409 tests)**, `tools/cek-statis.py` clean on 123 Kotlin and 12 XML files. 123 new tests: `UraiAksiTest` (every function valid and invalid, ids, dates, times, ranges, cleaning), `DeklarasiAksiTest` (driven from the declarations: every declared name, every field and every required field is really read by the parser; enum lists equal the app's enums; JSON shape; no forbidden words), `ProtokolAksiTest` (function calls in responses, request body with tools, temperature), `UsulanHanakoTest` (storage codec, expiry, de-duplication, balasan text, chat codec flag), `PerencanaAksiTest` (edits applied to current data, deleted items, invalid results), `LabelAksiTest`, `KonteksAksiTest` (ids, rules, privacy, injection by line breaks, size), `PenjawabLokalUbahTest`, `MiniJsonTulisTest`.
+- **Sanity check of those tests**: deliberate bugs in scratch copies (delete not flagged destructive, ids not required to exist, "Belum ada yang diubah" removed, planner not checking existence, a misspelled declared field name, date range unchecked, tanggal+hari accepted together, expiry unchecked, unknown function accepted, snooze limit loosened, break slots editable, no 5-proposal cap, invisible characters not stripped, tools always / never sent, chat flag lost, prefix matching of change words). Result: **18 of 18 deliberate bugs made at least one test fail** (none went unnoticed).
 - `tools/jvm-check.sh`: compiles 36 domain/`data/ai` files plus the entity/mapper files against Room annotation stubs, and 27 test files, with Kotlin 2.0.21, then runs JUnit. **Result: OK (286 tests)**: 179 from Phases 1–5, **22 new for Phase 7** (speech text cleaner 10, settings/status/dictation helpers 12) and **85 for Phase 6**: `MiniJson` 9 (nested values, escapes, round trip of tricky text, malformed input, depth limit), chat history and codec 9, request body / response parser / error mapping / mood marker 16, prompt builder 12 (date and time, sensitive memory never included, "not shared" mode, injection by line breaks, size cap, all 12 expression markers named), local responder 14, error labels 4, settings/model/key validation 6, expression choice 2, and **13 tests of `KlienGemini` against a real server on 127.0.0.1** (method, path, key only in the header, never in the URL, request body bytes incl. emoji, 400/403/404/429/503 mapping, key blanked out of error text, timeout, connection refused, invalid model names and blank key never reach the server, redirects not followed, 3 MB response cut off, HTTPS-only rule, coroutine entry point).
 - **Sanity check of the tests themselves**: seven deliberate bugs in scratch copies (sensitive memories included, "thought" parts not skipped, quote not escaped, history not starting with a user turn, redirects followed, key not blanked, model name not validated): the suite failed 7 + 3 tests, i.e. it detects them.
 - The Phase 7 tests found **two real bugs** in the first version of the speech text cleaner (a full stop was placed after an emoji, and an emoji-only reply became "."); both were fixed and are covered now.
@@ -144,7 +161,7 @@ Gaps against the master prompt (not hidden):
 - Android 13+ has no prompt outside the Pengingat screen (the target phone is Android 11).
 - School supply checklist, OCR import, bulk reschedule, memory prediction status (see earlier handoff; the last needs a Room migration in Phase 9).
 - Hanako: only faces are used (now also in the chat); gestures, motion poses, chibi and higher-resolution images are still to do.
-- Hanako cannot create or change tasks/schedule yet (no function calling), no streaming, no wake word, no spoken reminders.
+- Hanako can propose changes to tasks, activities, timetable and reminder settings (see "Hanako actions"), but not to goals or memories; no streaming, no wake word, no spoken reminders.
 - Prayer, habits, money, study, wellness, journal: Phase 8. Supabase and automatic memory learning: Phase 9.
 
 ## Exact next steps
@@ -174,13 +191,22 @@ Gaps against the master prompt (not hidden):
    c. Gear screen -> **Suara**: tap **Uji suara**; change speed and pitch and test again; the status line says whether Indonesian is available (if the data is missing, **Pasang data suara** opens the system installer).
    d. Switch **Bacakan balasan otomatis** on and send a message: the reply is read by itself. Listen to how times and lists sound ("07:00–08:30 Matematika"), and note anything that sounds wrong.
    e. Switch airplane mode on and try the microphone: note whether the recognizer works offline on this phone.
-8. Then Phase 8 (Life Management): prayer, habits, money, study, wellness, journal. Check the master prompt for the exact scope first.
+8. Phone checklist, **Hanako actions** (needs the key from step 6):
+   a. Gear screen: the switch **Izinkan Hanako mengusulkan perubahan** is on. Ask "tambah tugas PR Matematika tenggat besok": a card "Usulan Hanako, belum dijalankan" appears with the description; the tab **Aktivitas** still has NO such task. Tap **Setujui**: a grey "Sudah dilakukan" message appears and the task is now in Aktivitas.
+   b. Ask "ubah tenggat PR Matematika jadi lusa": the card shows old -> new date. Tap **Tolak**: "Usulan dibatalkan", nothing changed.
+   c. Ask "hapus tugas PR Matematika": the card is red, says "Tidak bisa dibatalkan", the button says "Setujui dan hapus".
+   d. Ask "ingatkan aku besok jam 7 pagi untuk olahraga": she should propose an activity at 07:00 and say when the reminder rings. After Setujui, Profil -> Atur pengingat -> Pengingat berikutnya must list it. Then ask "atur pengingat jadi tepat waktu": a reminder-settings card.
+   e. Ask "mulai mode fokus 30 menit": card; after Setujui the Pengingat screen shows Fokus.
+   f. Ask something that clashes with a lesson: the card must show "Bentrok dengan ...".
+   g. Switch the new setting off and repeat (a): no card, and she says she cannot change data. Turn sharing off: she must say she cannot see the data and can only add.
+   h. Note every case where she proposes something wrong or claims it is done; paste the chat text next time.
+9. Then Phase 8 (Life Management): prayer, habits, money, study, wellness, journal. Check the master prompt for the exact scope first.
 
 ## Continuation prompt (paste into the next session)
 ```
 Lanjutkan proyek ASISTEN dari HANDOFF.md terbaru (jangan mulai ulang, jangan minta saya mengulang persyaratan).
-Status: kode Fase 1–7 sudah ditulis; logika murni dan klien HTTP Gemini terverifikasi (286 tes JVM lolos lewat tools/jvm-check.sh, pemeriksa statis tools/cek-statis.py bersih), tetapi build Android, alarm/notifikasi, chat Hanako, dan suara belum pernah dijalankan di HP, dan belum ada permintaan nyata ke Gemini.
-Hasil GitHub Actions saya: <tempel log error, atau tulis "hijau, APK terpasang, semua pemeriksaan di langkah 4, 5, 6 dan 7 berhasil" / sebutkan yang gagal, termasuk nama model yang ditolak, suara yang tidak ada, atau jawaban Hanako yang salah>.
+Status: kode Fase 1–7 dan "aksi Hanako" (Hanako mengusulkan perubahan yang harus disetujui pengguna) sudah ditulis; logika murni dan klien HTTP Gemini terverifikasi (409 tes JVM lolos lewat tools/jvm-check.sh, pemeriksa statis tools/cek-statis.py bersih), tetapi build Android, alarm/notifikasi, chat Hanako, dan suara belum pernah dijalankan di HP, dan belum ada permintaan nyata ke Gemini.
+Hasil GitHub Actions saya: <tempel log error, atau tulis "hijau, APK terpasang, semua pemeriksaan di langkah 4 sampai 8 berhasil" / sebutkan yang gagal, termasuk nama model yang ditolak, suara yang tidak ada, atau jawaban Hanako yang salah>.
 Master prompt asli: <tempel bagian Fase 6 dan 7 (dan Fase 8–10) kalau ada yang belum tercakup>.
 Jika ada error: perbaiki penyebabnya secara minimal dan jelaskan, tanpa menambah fitur baru. Jika error KSP "kotlin.sourceSets DSL", tambahkan android.disallowKotlinSourceSets=false. Jika KlienGeminiTest tidak bisa dikompilasi di Gradle, hapus berkas tes itu dan catat.
 Jika hijau: kerjakan Fase 8 (manajemen hidup) sesuai master prompt, lalu perbarui PROGRESS.md, HANDOFF.md, CHANGELOG.md dengan hasil tes yang nyata.

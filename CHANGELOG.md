@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [Unreleased] — Hanako actions: she can propose changes to the app (2026-11-16)
+### Added
+- Hanako can now propose (never silently do) changes: add / change / delete tasks, activities and timetable lessons, mark a task done or not done, change reminder settings (minutes before, snooze, quiet hours, on/off), start or end Fokus / Istirahat mode. Uses Gemini function calling (13 declared functions).
+- Proposal cards in the chat ("Usulan Hanako, belum dijalankan") with **Setujui** and **Tolak**. Edits show old -> new values; clashes with the schedule and "cannot be undone" are shown as warnings; deletes use the error colours and a "Setujui dan hapus" button.
+- The app writes its own chat reports ("Sudah dilakukan: ...", "Tidak jadi: ...", "Usulan dibatalkan ...", labelled "Perubahan di aplikasi"; not read aloud) and always adds "Belum ada yang diubah" under a reply that carries proposals, whatever the model wrote.
+- Proposals are stored (DataStore, max 10, expire after 24 h, identical ones not stacked) and re-checked whenever they are shown or approved; one that no longer makes sense (task deleted, date passed, already done) disappears.
+- Settings switch "Izinkan Hanako mengusulkan perubahan" (default on). Off: no function declarations are sent and the prompt says she cannot change data.
+- Prompt: id-bearing lists of open tasks, activities and timetable plus a one-line summary of the reminder settings (only when "Bagikan data" is on); rules that she proposes, never claims it is done, asks when date or time is unclear, and explains that reminders ring N minutes before an activity starts.
+- Offline answer to change requests ("tambah tugas ...", "hapus ...", "ingatkan ...") that says what is needed instead of listing data.
+- `MiniJson.tulis` (JSON writer); `HasilGemini.Berhasil` carries the function calls; `PermintaanGemini.badan(..., alat = true)` adds the declarations and lowers the temperature to 0.4.
+- 123 new JVM tests (409 total). A declaration-driven test checks that every declared function and field name is really read by the parser and every required field is really required.
+
+### Changed
+- `PesanChat.aksi` flag; the history line's kind flag is now 0 normal / 1 local / 2 app report (old histories still read).
+- Prompt size cap raised from 6000 to 12000 characters; `tools/cek-statis.py` accepts imports of object members.
+
+### Not done / not verified
+- Never compiled by Gradle, never run on a phone, **never tried against the real Gemini API**: whether the model follows the function schema and the rules is unknown. The Android-only parts (`PelaksanaAksi`, repository additions, `HanakoViewModel`, the cards in `HanakoScreen`) had no independent review.
+- No actions for goals (tujuan) or memories, no undo after approval, no spoken confirmation, no bulk reschedule.
+
 ## [Unreleased] — Phase 7: Voice (2026-11-08)
 ### Added
 - Microphone button in the chat: the system speech dialog (Indonesian) fills the input; the user still presses Send. No microphone permission is requested by this app.

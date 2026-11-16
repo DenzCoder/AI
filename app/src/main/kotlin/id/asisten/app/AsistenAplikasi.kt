@@ -6,6 +6,7 @@ import android.util.Log
 import id.asisten.app.data.ai.KlienGemini
 import id.asisten.app.data.db.AsistenDatabase
 import id.asisten.app.data.hanako.HanakoRepository
+import id.asisten.app.data.hanako.PelaksanaAksi
 import id.asisten.app.data.hanako.PengacakKeystore
 import id.asisten.app.data.pengaturan.PengaturanRepository
 import id.asisten.app.data.pengaturan.penyimpananPengaturan
@@ -36,6 +37,7 @@ class WadahAplikasi(context: Context) {
     val jadwal: JadwalRepository by lazy { JadwalRepository(database.kegiatanDao(), database.sekolahDao()) }
     val aktivitas: AktivitasRepository by lazy { AktivitasRepository(database.tugasDao(), database.tujuanDao()) }
     val hanako: HanakoRepository by lazy { HanakoRepository(app.penyimpananPengaturan, PengacakKeystore()) }
+    val pelaksanaAksi: PelaksanaAksi by lazy { PelaksanaAksi(jadwal, aktivitas, pengaturan) }
     val klienGemini: KlienGemini by lazy { KlienGemini() }
     val suara: SuaraRepository by lazy { SuaraRepository(app.penyimpananPengaturan) }
     val pembaca: PembacaSuara by lazy { PembacaSuara(app) }
