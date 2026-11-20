@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import id.asisten.app.data.pengaturan.PengaturanRepository
+import id.asisten.app.data.pengingat.SuaraPengingatRepository
 import id.asisten.app.data.repo.AktivitasRepository
 import id.asisten.app.data.repo.JadwalRepository
 import id.asisten.app.domain.Prioritas
@@ -14,6 +15,7 @@ import id.asisten.app.domain.pengingat.JenisPengingat
 import id.asisten.app.domain.pengingat.KebijakanNotifikasi
 import id.asisten.app.domain.pengingat.Keputusan
 import id.asisten.app.domain.pengingat.PengaturanPengingat
+import id.asisten.app.domain.pengingat.PengaturanSuaraPengingat
 import id.asisten.app.domain.pengingat.Pengingat
 import id.asisten.app.domain.pengingat.PenyusunNotifikasi
 import id.asisten.app.domain.pengingat.ProsesPengingat
@@ -40,6 +42,7 @@ class PenjadwalPengingat(
     private val jadwal: JadwalRepository,
     private val aktivitas: AktivitasRepository,
     private val penampil: PenampilNotifikasi,
+    private val suaraPengingat: SuaraPengingatRepository,
 ) {
     private val kunci = Mutex()
     private val alarmManager: AlarmManager = context.getSystemService(AlarmManager::class.java)
@@ -87,7 +90,7 @@ class PenjadwalPengingat(
     suspend fun kirimUji(): Keputusan {
         val p = pengaturan.pengingat.first()
         val keputusan = KebijakanNotifikasi.putuskan(Prioritas.SEDANG, p, System.currentTimeMillis(), ZoneId.systemDefault())
-        penampil.tampilkanUji(keputusan.nada)
+        penampil.tampilkanUji(keputusan.nada, suaraPengingat.pengaturan.first())
         return keputusan
     }
 
@@ -101,8 +104,9 @@ class PenjadwalPengingat(
         val awal = pengaturan.keadaanPengingat.first()
 
         if (kirimTerlewat) {
+            val suara = suaraPengingat.pengaturan.first()
             ProsesPengingat.jatuhTempo(data, awal.tunda, p, awal.prosesTerakhir, sekarang, zona)
-                .forEach { kirim(it, data, p, sekarang, zona) }
+                .forEach { kirim(it, data, p, sekarang, zona, suara) }
         }
 
         // Everything up to now counts as handled; snoozes that have passed are removed.
@@ -112,11 +116,18 @@ class PenjadwalPengingat(
         pasangBerikutnya(data, baru.tunda, p, sekarang, zona)
     }
 
-    private fun kirim(pengingat: Pengingat, data: DataPengingat, p: PengaturanPengingat, sekarang: Long, zona: ZoneId) {
+    private fun kirim(
+        pengingat: Pengingat,
+        data: DataPengingat,
+        p: PengaturanPengingat,
+        sekarang: Long,
+        zona: ZoneId,
+        suara: PengaturanSuaraPengingat,
+    ) {
         // The text is built from current data: a deleted, completed or moved item yields null and is skipped.
         val isi = PenyusunNotifikasi.susun(pengingat, data, sekarang, zona) ?: return
         val keputusan = KebijakanNotifikasi.putuskan(isi.prioritas, p, sekarang, zona)
-        penampil.tampilkan(pengingat, isi, keputusan.nada)
+        penampil.tampilkan(pengingat, isi, keputusan.nada, suara)
     }
 
     private fun pasangBerikutnya(data: DataPengingat, tunda: List<Tunda>, p: PengaturanPengingat, sekarang: Long, zona: ZoneId) {

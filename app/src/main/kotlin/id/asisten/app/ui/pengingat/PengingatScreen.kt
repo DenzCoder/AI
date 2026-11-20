@@ -66,7 +66,7 @@ fun PengingatScreen(
     onKembali: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val vm = wadahViewModel { PengingatViewModel(it.pengaturan, it.penjadwal) }
+    val vm = wadahViewModel { PengingatViewModel(it.pengaturan, it.penjadwal, it.suaraPengingat, it.pengelolaSuara) }
     val pengaturan by vm.pengaturan.collectAsStateWithLifecycle()
     val berikutnya by vm.berikutnya.collectAsStateWithLifecycle()
     val hasilUji by vm.hasilUji.collectAsStateWithLifecycle()
@@ -303,6 +303,8 @@ fun PengingatScreen(
             }
         }
 
+        BagianSuaraPengingat(vm)
+
         BagianPengingat("Uji notifikasi") {
             TeksPetunjuk("Kirim satu notifikasi sekarang untuk memeriksa izin, suara, dan mode yang sedang aktif.")
             OutlinedButton(onClick = { vm.kirimUji(CekIzin.notifikasiDiizinkan(context)) }) {
@@ -323,7 +325,7 @@ private fun bukaHalaman(context: Context, intent: Intent): Boolean = try {
 }
 
 @Composable
-private fun BagianPengingat(judul: String, isi: @Composable () -> Unit) {
+internal fun BagianPengingat(judul: String, isi: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         JudulBagian(judul)
         isi()
@@ -331,7 +333,7 @@ private fun BagianPengingat(judul: String, isi: @Composable () -> Unit) {
 }
 
 @Composable
-private fun BarisSakelar(teks: String, aktif: Boolean, onUbah: (Boolean) -> Unit) {
+internal fun BarisSakelar(teks: String, aktif: Boolean, onUbah: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,

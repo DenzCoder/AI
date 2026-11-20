@@ -36,6 +36,7 @@ for f in (res / "values").glob("*.xml"):
         strings.add(el.get("name"))
 drawables = {p.stem for d in res.glob("drawable*") for p in d.iterdir() if p.is_file()}
 drawables |= {p.stem for d in res.glob("mipmap*") for p in d.iterdir() if p.is_file()}
+raws = {p.stem for d in res.glob("raw*") for p in d.iterdir() if p.is_file()}
 
 # --- Kotlin ---
 kt_files = sorted((APP).rglob("*.kt"))
@@ -127,6 +128,9 @@ for f, teks in sumber.items():
     for m in re.finditer(r"\bR\.drawable\.(\w+)", teks):
         if m.group(1) not in drawables:
             lapor(f"R.drawable.{m.group(1)} tidak ada ({f.relative_to(RAIL)})")
+    for m in re.finditer(r"\bR\.raw\.(\w+)", teks):
+        if m.group(1) not in raws:
+            lapor(f"R.raw.{m.group(1)} tidak ada ({f.relative_to(RAIL)})")
 
 for f in xml_files:
     teks = f.read_text(encoding="utf-8")

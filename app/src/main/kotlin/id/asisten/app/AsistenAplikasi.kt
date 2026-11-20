@@ -10,11 +10,13 @@ import id.asisten.app.data.hanako.PelaksanaAksi
 import id.asisten.app.data.hanako.PengacakKeystore
 import id.asisten.app.data.pengaturan.PengaturanRepository
 import id.asisten.app.data.pengaturan.penyimpananPengaturan
+import id.asisten.app.data.pengingat.SuaraPengingatRepository
 import id.asisten.app.data.repo.AktivitasRepository
 import id.asisten.app.data.repo.JadwalRepository
 import id.asisten.app.data.repo.MemoriRepository
 import id.asisten.app.data.suara.SuaraRepository
 import id.asisten.app.notifikasi.PekerjaPengaman
+import id.asisten.app.notifikasi.PengelolaSuara
 import id.asisten.app.notifikasi.PenampilNotifikasi
 import id.asisten.app.notifikasi.PenjadwalPengingat
 import id.asisten.app.suara.PembacaSuara
@@ -25,6 +27,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /** Hand-written dependency container (no DI framework, to keep the app small). Everything is lazy. */
@@ -42,22 +45,26 @@ class WadahAplikasi(context: Context) {
     val suara: SuaraRepository by lazy { SuaraRepository(app.penyimpananPengaturan) }
     val pembaca: PembacaSuara by lazy { PembacaSuara(app) }
 
-    val penampil: PenampilNotifikasi by lazy { PenampilNotifikasi(app) }
-    val penjadwal: PenjadwalPengingat by lazy { PenjadwalPengingat(app, pengaturan, jadwal, aktivitas, penampil) }
+    val suaraPengingat: SuaraPengingatRepository by lazy { SuaraPengingatRepository(app.penyimpananPengaturan) }
+    val pengelolaSuara: PengelolaSuara by lazy { PengelolaSuara(app) }
+    val penampil: PenampilNotifikasi by lazy { PenampilNotifikasi(app, pengelolaSuara) }
+    val penjadwal: PenjadwalPengingat by lazy {
+        PenjadwalPengingat(app, pengaturan, jadwal, aktivitas, penampil, suaraPengingat)
+    }
 
     private val lingkup = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /**
      * Starts the reminder system. Called once per process (also when an alarm or the restart receiver wakes the app).
-     * 1. channels and the WorkManager safety net are set up;
+     * 1. the WorkManager safety net and the notification channels (for the chosen sound) are set up;
      * 2. reminders that came due while the app was not running are delivered (if still recent);
      * 3. from then on every change to activities, tasks, school data or reminder settings re-arms the alarm.
      */
     fun mulaiPengingat() {
-        penampil.buatSaluran()
         PekerjaPengaman.jadwalkan(app)
         lingkup.launch {
             try {
+                penampil.siapkanSaluran(suaraPengingat.pengaturan.first())
                 penjadwal.proses(kirimTerlewat = true)
                 // collectLatest + delay acts as a debounce: a burst of edits triggers one re-arm.
                 // Edits never deliver stale reminders (kirimTerlewat = false).
