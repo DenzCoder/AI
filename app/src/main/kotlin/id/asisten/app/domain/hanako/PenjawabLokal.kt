@@ -6,7 +6,7 @@ import id.asisten.app.domain.SapaanProvider
 data class BalasanLokal(val teks: String, val ekspresi: EkspresiHanako)
 
 /**
- * The offline fallback: when no Gemini key is set up (or online mode is off) Hanako still answers a few questions
+ * The offline fallback: when no AI key is set up (or online mode is off) Hanako still answers a few questions
  * from the user's real data, by simple keyword matching. It never invents anything: if it does not understand,
  * it says so and explains how to turn on the AI.
  */
@@ -72,7 +72,7 @@ object PenjawabLokal {
         if (bagian.isEmpty()) {
             return BalasanLokal(
                 "Aku sedang dalam mode lokal, jadi baru bisa menjawab soal jadwal, tugas, dan tujuanmu. " +
-                    "Untuk ngobrol bebas, hubungkan kunci Gemini lewat ikon gerigi di atas.",
+                    "Untuk ngobrol bebas, hubungkan kunci AI (Gemini, Groq, atau DeepSeek) lewat ikon gerigi di atas.",
                 EkspresiHanako.BINGUNG,
             )
         }
@@ -82,7 +82,7 @@ object PenjawabLokal {
     }
 
     const val PESAN_UBAH =
-        "Di mode lokal aku belum bisa mengubah apa pun di aplikasi. Hubungkan kunci Gemini lewat ikon gerigi di atas " +
+        "Di mode lokal aku belum bisa mengubah apa pun di aplikasi. Hubungkan kunci AI lewat ikon gerigi di atas " +
             "dan nyalakan mode online, lalu aku bisa mengusulkan perubahannya untuk kamu setujui. " +
             "Sementara itu kamu bisa mengubahnya sendiri di tab Jadwal atau Aktivitas, atau lewat Profil > Pengingat dan mode."
 

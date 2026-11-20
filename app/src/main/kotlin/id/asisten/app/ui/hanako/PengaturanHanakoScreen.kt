@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.asisten.app.R
 import id.asisten.app.domain.hanako.LabelHanako
+import id.asisten.app.domain.hanako.PenyediaAi
 import id.asisten.app.domain.suara.LabelSuara
 import id.asisten.app.domain.suara.PilihanSuara
 import id.asisten.app.ui.komponen.BarisPilihan
@@ -48,8 +49,6 @@ import id.asisten.app.ui.komponen.DialogKonfirmasi
 import id.asisten.app.ui.komponen.JudulBagian
 import id.asisten.app.ui.komponen.JudulHalaman
 import id.asisten.app.ui.komponen.TeksPetunjuk
-
-private const val ALAMAT_STUDIO = "https://aistudio.google.com/apikey"
 
 /** Hanako's settings. Everything shown is real state; the key field is never kept in saved instance state. */
 @Composable
@@ -66,12 +65,14 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
 
     // Not rememberSaveable on purpose: the key must not end up in the saved instance state.
     var kunciInput by remember { mutableStateOf("") }
-    var setuju by rememberSaveable { mutableStateOf(false) }
     var konfirmasiRiwayat by rememberSaveable { mutableStateOf(false) }
     var konfirmasiKunci by rememberSaveable { mutableStateOf(false) }
 
     val p = pengaturan ?: return
-    var modelInput by remember(p.model) { mutableStateOf(p.model) }
+    val penyedia = p.penyedia
+    // Each service has its own key field, consent and model name, so switching service starts them fresh.
+    var setuju by rememberSaveable(penyedia) { mutableStateOf(false) }
+    var modelInput by remember(penyedia, p.model) { mutableStateOf(p.model) }
 
     Column(
         modifier = modifier
@@ -87,12 +88,21 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
             JudulHalaman(stringResource(R.string.hanako_set_judul))
         }
 
-        // --- Gemini key ---
+        // --- AI service + key ---
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             JudulBagian(stringResource(R.string.hanako_set_ai_judul))
             TeksPetunjuk(stringResource(R.string.hanako_set_ai_ket))
+            BarisPilihan(
+                opsi = PenyediaAi.entries,
+                terpilih = penyedia,
+                label = { it.nama + if (it in p.penyediaBerkunci) " ✓" else "" },
+                onPilih = vm::ubahPenyedia,
+            )
             Text(
-                text = stringResource(if (p.adaKunci) R.string.hanako_set_kunci_tersimpan else R.string.hanako_set_kunci_belum),
+                text = stringResource(
+                    if (p.adaKunci) R.string.hanako_set_kunci_tersimpan else R.string.hanako_set_kunci_belum,
+                    penyedia.nama,
+                ),
                 style = MaterialTheme.typography.bodyMedium,
             )
             OutlinedTextField(
@@ -101,30 +111,35 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
                     kunciInput = it.take(300)
                     vm.tutupPesanKunci()
                 },
-                label = { Text(stringResource(R.string.hanako_set_kunci_label)) },
-                placeholder = { Text(stringResource(R.string.hanako_set_kunci_petunjuk)) },
+                label = { Text(stringResource(R.string.hanako_set_kunci_label, penyedia.nama)) },
+                placeholder = { Text(stringResource(R.string.hanako_set_kunci_petunjuk, penyedia.halamanKunci)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth(),
             )
+            penyedia.catatanData?.let { catatan ->
+                Text(
+                    text = catatan,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = setuju, onCheckedChange = { setuju = it })
                 Text(
-                    text = stringResource(R.string.hanako_set_setuju),
+                    text = stringResource(R.string.hanako_set_setuju, penyedia.nama),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
             }
             pesanKunci?.let { pesan ->
                 Text(
-                    text = stringResource(
-                        when (pesan) {
-                            PesanKunci.DISIMPAN -> R.string.hanako_set_kunci_disimpan
-                            PesanKunci.DITOLAK -> R.string.hanako_set_kunci_ditolak
-                            PesanKunci.PERLU_SETUJU -> R.string.hanako_set_perlu_setuju
-                        },
-                    ),
+                    text = when (pesan) {
+                        PesanKunci.DISIMPAN -> stringResource(R.string.hanako_set_kunci_disimpan, penyedia.nama)
+                        PesanKunci.DITOLAK -> stringResource(R.string.hanako_set_kunci_ditolak)
+                        PesanKunci.PERLU_SETUJU -> stringResource(R.string.hanako_set_perlu_setuju)
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (pesan == PesanKunci.DISIMPAN) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 )
@@ -132,7 +147,7 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = {
-                        vm.simpanKunci(kunciInput, setuju)
+                        vm.simpanKunci(penyedia, kunciInput, setuju)
                         kunciInput = ""
                     },
                     enabled = kunciInput.isNotBlank(),
@@ -144,8 +159,8 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
                 }
             }
             // openUri throws when the phone has no browser, so the call is guarded.
-            TextButton(onClick = { runCatching { penanganUri.openUri(ALAMAT_STUDIO) } }) {
-                Text(stringResource(R.string.hanako_set_buka_studio))
+            TextButton(onClick = { runCatching { penanganUri.openUri("https://${penyedia.halamanKunci}") } }) {
+                Text(stringResource(R.string.hanako_set_buka_halaman, penyedia.halamanKunci))
             }
         }
 
@@ -178,17 +193,26 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
         // --- model + connection test ---
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             JudulBagian(stringResource(R.string.hanako_set_model))
+            BarisPilihan(
+                opsi = penyedia.saranModel,
+                terpilih = p.model,
+                label = { it },
+                onPilih = {
+                    modelInput = it
+                    vm.ubahModel(penyedia, it)
+                },
+            )
             OutlinedTextField(
                 value = modelInput,
                 onValueChange = { modelInput = it.take(80) },
-                label = { Text(stringResource(R.string.hanako_set_model_label)) },
-                supportingText = { Text(stringResource(R.string.hanako_set_model_petunjuk)) },
+                label = { Text(stringResource(R.string.hanako_set_model_label, penyedia.nama)) },
+                supportingText = { Text(stringResource(R.string.hanako_set_model_petunjuk, penyedia.modelBawaan)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
-                    onClick = { vm.ubahModel(modelInput) },
+                    onClick = { vm.ubahModel(penyedia, modelInput) },
                     enabled = modelInput.isNotBlank() && modelInput.trim() != p.model,
                 ) { Text(stringResource(R.string.hanako_set_model_simpan)) }
                 Button(
@@ -200,12 +224,12 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
                 null -> Unit
                 HasilUji.Memproses -> Text(stringResource(R.string.hanako_set_uji_proses), style = MaterialTheme.typography.bodyMedium)
                 HasilUji.Berhasil -> Text(
-                    text = stringResource(R.string.hanako_set_uji_berhasil),
+                    text = stringResource(R.string.hanako_set_uji_berhasil, penyedia.nama),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
                 is HasilUji.Gagal -> Text(
-                    text = LabelHanako.galat(h.jenis) + if (h.rinci.isNotBlank()) " (${h.rinci})" else "",
+                    text = LabelHanako.galat(h.jenis, h.penyedia) + if (h.rinci.isNotBlank()) " (${h.rinci})" else "",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -280,9 +304,9 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
     if (konfirmasiKunci) {
         DialogKonfirmasi(
             judul = stringResource(R.string.hanako_set_hapus_kunci),
-            pesan = stringResource(R.string.hanako_set_hapus_kunci_tanya),
+            pesan = stringResource(R.string.hanako_set_hapus_kunci_tanya, penyedia.nama),
             onYa = {
-                vm.hapusKunci()
+                vm.hapusKunci(penyedia)
                 konfirmasiKunci = false
             },
             onBatal = { konfirmasiKunci = false },

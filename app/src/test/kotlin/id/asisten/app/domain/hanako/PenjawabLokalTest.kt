@@ -104,7 +104,7 @@ class PenjawabLokalTest {
         val b = PenjawabLokal.jawab("ceritakan lelucon tentang kucing", latar())
         assertEquals(EkspresiHanako.BINGUNG, b.ekspresi)
         assertTrue(b.teks.contains("mode lokal"))
-        assertTrue(b.teks.contains("Gemini"))
+        assertTrue(b.teks.contains("kunci AI"))
     }
 
     @Test

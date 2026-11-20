@@ -2,7 +2,7 @@ package id.asisten.app.ui.hanako
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import id.asisten.app.data.ai.KlienGemini
+import id.asisten.app.data.ai.KlienAi
 import id.asisten.app.data.hanako.HanakoRepository
 import id.asisten.app.data.hanako.HasilPelaksanaan
 import id.asisten.app.data.hanako.PelaksanaAksi
@@ -14,7 +14,7 @@ import id.asisten.app.data.suara.SuaraRepository
 import id.asisten.app.domain.hanako.BalasanAksi
 import id.asisten.app.domain.hanako.DataSaatIni
 import id.asisten.app.domain.hanako.EkspresiHanako
-import id.asisten.app.domain.hanako.HasilGemini
+import id.asisten.app.domain.hanako.HasilAi
 import id.asisten.app.domain.hanako.HasilUrai
 import id.asisten.app.domain.hanako.JenisGalat
 import id.asisten.app.domain.hanako.KonteksHanako
@@ -23,7 +23,8 @@ import id.asisten.app.domain.hanako.LatarHanako
 import id.asisten.app.domain.hanako.PanggilanFungsi
 import id.asisten.app.domain.hanako.PengaturanHanako
 import id.asisten.app.domain.hanako.PenjawabLokal
-import id.asisten.app.domain.hanako.PermintaanGemini
+import id.asisten.app.domain.hanako.PenyediaAi
+import id.asisten.app.domain.hanako.PermintaanAi
 import id.asisten.app.domain.hanako.PeranChat
 import id.asisten.app.domain.hanako.PesanChat
 import id.asisten.app.domain.hanako.RiwayatChat
@@ -54,12 +55,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /** A failed request, kept on screen with the user's message so "Coba lagi" can resend it. */
-data class GalatChat(val jenis: JenisGalat, val rinci: String = "")
+data class GalatChat(val jenis: JenisGalat, val rinci: String = "", val penyedia: PenyediaAi = PenyediaAi.GEMINI)
 
 sealed interface HasilUji {
     data object Memproses : HasilUji
     data object Berhasil : HasilUji
-    data class Gagal(val jenis: JenisGalat, val rinci: String) : HasilUji
+    data class Gagal(val jenis: JenisGalat, val rinci: String, val penyedia: PenyediaAi = PenyediaAi.GEMINI) : HasilUji
 }
 
 enum class PesanKunci { DISIMPAN, DITOLAK, PERLU_SETUJU }
@@ -70,7 +71,7 @@ class HanakoViewModel(
     private val jadwal: JadwalRepository,
     private val aktivitas: AktivitasRepository,
     private val memori: MemoriRepository,
-    private val klien: KlienGemini,
+    private val klien: KlienAi,
     private val suara: SuaraRepository,
     private val pembaca: PembacaSuara,
     private val pelaksana: PelaksanaAksi,
@@ -156,31 +157,35 @@ class HanakoViewModel(
     }
 
     private suspend fun jawab(pertanyaan: String) {
+        var penyedia = PenyediaAi.GEMINI
         try {
             val p = hanako.pengaturan.first()
+            penyedia = p.penyedia
             if (!p.online) {
                 // Local mode: answers come from the data on the phone only; nothing is sent anywhere.
                 val b = PenjawabLokal.jawab(pertanyaan, kumpulkanLatar(bagikan = true, ikutkanMemori = false))
                 simpanBalasan(PesanChat(PeranChat.HANAKO, b.teks, b.ekspresi, System.currentTimeMillis(), lokal = true))
                 return
             }
-            val kunci = hanako.kunci()
+            val kunci = hanako.kunci(p.penyedia)
             if (kunci == null) {
-                _galat.value = GalatChat(JenisGalat.TANPA_KUNCI)
+                _galat.value = GalatChat(JenisGalat.TANPA_KUNCI, penyedia = p.penyedia)
                 return
             }
             val bisaMengusulkan = p.bisaMengusulkan
             val latar = kumpulkanLatar(bagikan = p.bagikanData, ikutkanMemori = true, aksi = bisaMengusulkan)
-            val badan = PermintaanGemini.badan(KonteksHanako.sistem(latar), hanako.riwayat.first(), alat = bisaMengusulkan)
-            when (val hasil = klien.kirim(kunci, p.model, badan)) {
-                is HasilGemini.Gagal -> _galat.value = GalatChat(hasil.jenis, hasil.rinci)
-                is HasilGemini.Berhasil -> {
+            val badan = PermintaanAi.badan(
+                p.penyedia, p.model, KonteksHanako.sistem(latar), hanako.riwayat.first(), alat = bisaMengusulkan,
+            )
+            when (val hasil = klien.kirim(p.penyedia, kunci, p.model, badan)) {
+                is HasilAi.Gagal -> _galat.value = GalatChat(hasil.jenis, hasil.rinci, p.penyedia)
+                is HasilAi.Berhasil -> {
                     val b = UraiBalasan.urai(hasil.teks)
                     val ekspresi = b.ekspresi ?: EkspresiHanako.NORMAL
                     if (bisaMengusulkan && hasil.panggilan.isNotEmpty()) {
                         simpanUsulan(b.teks, hasil.panggilan, ekspresi)
                     } else if (b.teks.isEmpty()) {
-                        _galat.value = GalatChat(JenisGalat.KOSONG)
+                        _galat.value = GalatChat(JenisGalat.KOSONG, penyedia = p.penyedia)
                     } else {
                         simpanBalasan(PesanChat(PeranChat.HANAKO, b.teks, ekspresi, System.currentTimeMillis()))
                     }
@@ -189,7 +194,7 @@ class HanakoViewModel(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            _galat.value = GalatChat(JenisGalat.TIDAK_DIKENAL, e.javaClass.simpleName)
+            _galat.value = GalatChat(JenisGalat.TIDAK_DIKENAL, e.javaClass.simpleName, penyedia)
         }
     }
 
@@ -312,22 +317,32 @@ class HanakoViewModel(
 
     // --- settings ---
 
-    fun simpanKunci(mentah: String, setuju: Boolean) {
+    /** Stores the key for [penyedia] (the service shown in the settings) and makes it the one in use. */
+    fun simpanKunci(penyedia: PenyediaAi, mentah: String, setuju: Boolean) {
         if (!setuju) {
             _pesanKunci.value = PesanKunci.PERLU_SETUJU
             return
         }
         viewModelScope.launch {
-            _pesanKunci.value = if (hanako.simpanKunci(mentah)) PesanKunci.DISIMPAN else PesanKunci.DITOLAK
+            _pesanKunci.value = if (hanako.simpanKunci(penyedia, mentah)) PesanKunci.DISIMPAN else PesanKunci.DITOLAK
             _hasilUji.value = null
         }
     }
 
-    fun hapusKunci() {
+    fun hapusKunci(penyedia: PenyediaAi) {
         viewModelScope.launch {
-            hanako.hapusKunci()
+            hanako.hapusKunci(penyedia)
             _pesanKunci.value = null
             _hasilUji.value = null
+        }
+    }
+
+    fun ubahPenyedia(penyedia: PenyediaAi) {
+        viewModelScope.launch {
+            hanako.ubahPenyedia(penyedia)
+            _pesanKunci.value = null
+            _hasilUji.value = null
+            _galat.value = null
         }
     }
 
@@ -343,9 +358,9 @@ class HanakoViewModel(
         viewModelScope.launch { hanako.ubahBagikanData(bagikan) }
     }
 
-    fun ubahModel(nama: String) {
+    fun ubahModel(penyedia: PenyediaAi, nama: String) {
         viewModelScope.launch {
-            hanako.ubahModel(nama)
+            hanako.ubahModel(penyedia, nama)
             _hasilUji.value = null
         }
     }
@@ -360,25 +375,29 @@ class HanakoViewModel(
         if (_hasilUji.value == HasilUji.Memproses) return
         _hasilUji.value = HasilUji.Memproses
         viewModelScope.launch {
+            var penyedia = PenyediaAi.GEMINI
             _hasilUji.value = try {
                 val p = hanako.pengaturan.first()
-                val kunci = hanako.kunci()
+                penyedia = p.penyedia
+                val kunci = hanako.kunci(p.penyedia)
                 if (kunci == null) {
-                    HasilUji.Gagal(JenisGalat.TANPA_KUNCI, "")
+                    HasilUji.Gagal(JenisGalat.TANPA_KUNCI, "", p.penyedia)
                 } else {
-                    val badan = PermintaanGemini.badan(
+                    val badan = PermintaanAi.badan(
+                        p.penyedia,
+                        p.model,
                         "Balas dengan satu kata saja.",
                         listOf(PesanChat(PeranChat.PENGGUNA, "Halo")),
                     )
-                    when (val h = klien.kirim(kunci, p.model, badan)) {
-                        is HasilGemini.Berhasil -> HasilUji.Berhasil
-                        is HasilGemini.Gagal -> HasilUji.Gagal(h.jenis, h.rinci)
+                    when (val h = klien.kirim(p.penyedia, kunci, p.model, badan)) {
+                        is HasilAi.Berhasil -> HasilUji.Berhasil
+                        is HasilAi.Gagal -> HasilUji.Gagal(h.jenis, h.rinci, p.penyedia)
                     }
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                HasilUji.Gagal(JenisGalat.TIDAK_DIKENAL, e.javaClass.simpleName)
+                HasilUji.Gagal(JenisGalat.TIDAK_DIKENAL, e.javaClass.simpleName, penyedia)
             }
         }
     }

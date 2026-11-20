@@ -1,44 +1,10 @@
 package id.asisten.app.domain.hanako
 
-/** Why a Gemini request produced no answer. Each kind has an Indonesian message in [LabelHanako.galat]. */
-enum class JenisGalat {
-    TANPA_KUNCI,
-    KUNCI_TIDAK_VALID,
-    AKSES_DITOLAK,
-    KUOTA,
-    MODEL_TIDAK_ADA,
-    PERMINTAAN_DITOLAK,
-    DIBLOKIR,
-    KOSONG,
-    SERVER,
-    JARINGAN,
-    WAKTU_HABIS,
-    TIDAK_DIKENAL,
-}
-
-sealed interface HasilGemini {
-    /**
-     * [teks] may be empty when the model only asked for changes ([panggilan]). A reply always has text or calls.
-     * The calls are proposals; nothing in them has been done.
-     */
-    data class Berhasil(val teks: String, val panggilan: List<PanggilanFungsi> = emptyList()) : HasilGemini
-
-    /** [rinci] is the (shortened) message the server sent, shown in small print for troubleshooting. */
-    data class Gagal(val jenis: JenisGalat, val rinci: String = "") : HasilGemini
-}
-
 /** Builds the JSON body of a `generateContent` request. */
 object PermintaanGemini {
-    const val SUHU = 0.8
-
-    /** Lower when the model may call functions: dates and ids must be exact, not creative. */
-    const val SUHU_ALAT = 0.4
-
-    /**
-     * Thinking models spend part of this budget on reasoning before they write the answer, so it is generous.
-     * The system prompt asks for short replies, so answers stay short anyway.
-     */
-    const val MAKS_TOKEN = 2048
+    const val SUHU = PermintaanAi.SUHU
+    const val SUHU_ALAT = PermintaanAi.SUHU_ALAT
+    const val MAKS_TOKEN = PermintaanAi.MAKS_TOKEN
 
     /**
      * [alat] adds the function declarations of [DeklarasiAksi], so the model can propose changes to the app.
@@ -56,20 +22,20 @@ object PermintaanGemini {
     }
 }
 
-/** Turns an HTTP status and body from `generateContent` into a [HasilGemini]. Pure, so it is unit-tested. */
+/** Turns an HTTP status and body from `generateContent` into a [HasilAi]. Pure, so it is unit-tested. */
 object UraiResponsGemini {
     private const val MAKS_RINCI = 200
     private val ALASAN_DIBLOKIR = setOf("SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "IMAGE_SAFETY", "RECITATION")
 
-    fun urai(kode: Int, badan: String): HasilGemini {
+    fun urai(kode: Int, badan: String): HasilAi {
         val json = MiniJson.uraiAtauNull(badan)
         return if (kode in 200..299) berhasil(json) else gagal(kode, json, badan)
     }
 
-    private fun berhasil(json: Any?): HasilGemini {
-        if (json !is Map<*, *>) return HasilGemini.Gagal(JenisGalat.TIDAK_DIKENAL, "Balasan server bukan JSON")
+    private fun berhasil(json: Any?): HasilAi {
+        if (json !is Map<*, *>) return HasilAi.Gagal(JenisGalat.TIDAK_DIKENAL, "Balasan server bukan JSON")
         val alasanBlokir = MiniJson.ambil(json, "promptFeedback", "blockReason") as? String
-        if (alasanBlokir != null) return HasilGemini.Gagal(JenisGalat.DIBLOKIR, alasanBlokir)
+        if (alasanBlokir != null) return HasilAi.Gagal(JenisGalat.DIBLOKIR, alasanBlokir)
 
         val bagian = MiniJson.ambil(json, "candidates", 0, "content", "parts") as? List<*> ?: emptyList<Any?>()
         val teks = bagian.mapNotNull { b ->
@@ -84,17 +50,17 @@ object UraiResponsGemini {
                 ?: emptyMap()
             PanggilanFungsi(nama, args)
         }
-        if (teks.isNotEmpty() || panggilan.isNotEmpty()) return HasilGemini.Berhasil(teks, panggilan)
+        if (teks.isNotEmpty() || panggilan.isNotEmpty()) return HasilAi.Berhasil(teks, panggilan)
 
         val selesai = MiniJson.ambil(json, "candidates", 0, "finishReason") as? String
         return if (selesai != null && selesai in ALASAN_DIBLOKIR) {
-            HasilGemini.Gagal(JenisGalat.DIBLOKIR, selesai)
+            HasilAi.Gagal(JenisGalat.DIBLOKIR, selesai)
         } else {
-            HasilGemini.Gagal(JenisGalat.KOSONG, selesai ?: "")
+            HasilAi.Gagal(JenisGalat.KOSONG, selesai ?: "")
         }
     }
 
-    private fun gagal(kode: Int, json: Any?, mentah: String): HasilGemini {
+    private fun gagal(kode: Int, json: Any?, mentah: String): HasilAi {
         val status = MiniJson.ambil(json, "error", "status") as? String ?: ""
         val pesan = (MiniJson.ambil(json, "error", "message") as? String ?: "").take(MAKS_RINCI)
         val rinci = if (pesan.isNotEmpty()) pesan else "HTTP $kode"
@@ -110,7 +76,7 @@ object UraiResponsGemini {
             kode in 500..599 -> JenisGalat.SERVER
             else -> JenisGalat.TIDAK_DIKENAL
         }
-        return HasilGemini.Gagal(jenis, rinci)
+        return HasilAi.Gagal(jenis, rinci)
     }
 }
 

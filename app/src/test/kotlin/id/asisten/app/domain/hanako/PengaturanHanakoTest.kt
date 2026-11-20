@@ -37,27 +37,27 @@ class PengaturanHanakoTest {
 
     @Test
     fun kunciDibersihkanDariSpasiDanTandaKutip() {
-        assertEquals("ABCDEFGHIJ1234567890", KunciGemini.bersihkan("  \"ABCDEFGHIJ\n1234567890\"  "))
-        assertEquals("ABC", KunciGemini.bersihkan("'A B C'"))
+        assertEquals("ABCDEFGHIJ1234567890", KunciAi.bersihkan("  \"ABCDEFGHIJ\n1234567890\"  "))
+        assertEquals("ABC", KunciAi.bersihkan("'A B C'"))
     }
 
     @Test
     fun kunciYangTerlihatTidakMasukAkalDitolak() {
-        assertTrue(KunciGemini.masukAkal("A".repeat(39)))
-        assertTrue(KunciGemini.masukAkal("AIzaSyA-bcd_efg.hij~klmnopqrstuvwx"))
-        assertFalse(KunciGemini.masukAkal(""))
-        assertFalse(KunciGemini.masukAkal("pendek"))
-        assertFalse(KunciGemini.masukAkal("A".repeat(19)))
-        assertFalse(KunciGemini.masukAkal("A".repeat(257)))
-        assertFalse(KunciGemini.masukAkal("A".repeat(20) + " spasi"))
-        assertFalse(KunciGemini.masukAkal("A".repeat(20) + "é"))
+        assertTrue(KunciAi.masukAkal("A".repeat(39)))
+        assertTrue(KunciAi.masukAkal("AIzaSyA-bcd_efg.hij~klmnopqrstuvwx"))
+        assertFalse(KunciAi.masukAkal(""))
+        assertFalse(KunciAi.masukAkal("pendek"))
+        assertFalse(KunciAi.masukAkal("A".repeat(19)))
+        assertFalse(KunciAi.masukAkal("A".repeat(257)))
+        assertFalse(KunciAi.masukAkal("A".repeat(20) + " spasi"))
+        assertFalse(KunciAi.masukAkal("A".repeat(20) + "é"))
     }
 
     @Test
     fun kunciPanjangSekaliDipotongSehinggaDitolak() {
-        val bersih = KunciGemini.bersihkan("A".repeat(10_000))
-        assertTrue(bersih.length <= KunciGemini.MAKS_PANJANG + 1)
-        assertFalse(KunciGemini.masukAkal(bersih))
+        val bersih = KunciAi.bersihkan("A".repeat(10_000))
+        assertTrue(bersih.length <= KunciAi.MAKS_PANJANG + 1)
+        assertFalse(KunciAi.masukAkal(bersih))
     }
 
     @Test

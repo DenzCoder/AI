@@ -19,6 +19,7 @@ class LabelHanakoTest {
         for (jenis in JenisGalat.entries) {
             val p = LabelHanako.galat(jenis)
             assertFalse(p.contains("AIza"))
+            assertFalse(p.contains("gsk_"))
             assertFalse(p.contains("Exception"))
         }
     }
@@ -28,6 +29,7 @@ class LabelHanakoTest {
         assertTrue(LabelHanako.perluPengaturan(JenisGalat.KUNCI_TIDAK_VALID))
         assertTrue(LabelHanako.perluPengaturan(JenisGalat.MODEL_TIDAK_ADA))
         assertTrue(LabelHanako.perluPengaturan(JenisGalat.TANPA_KUNCI))
+        assertTrue(LabelHanako.perluPengaturan(JenisGalat.SALDO_HABIS))
         assertFalse(LabelHanako.perluPengaturan(JenisGalat.JARINGAN))
 
         assertTrue(LabelHanako.bisaDiulang(JenisGalat.JARINGAN))

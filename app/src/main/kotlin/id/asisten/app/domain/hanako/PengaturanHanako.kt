@@ -3,14 +3,18 @@ package id.asisten.app.domain.hanako
 /**
  * Hanako chat settings. The API key itself is never part of this object: only whether one is stored.
  * [onlineAktif] is the user's switch; the chat only goes online when a key exists too ([online]).
+ * [penyedia] is the AI service in use; [model] and [adaKunci] belong to that service.
  */
 data class PengaturanHanako(
     val onlineAktif: Boolean = false,
     val bagikanData: Boolean = true,
-    val model: String = NamaModel.BAWAAN,
+    val penyedia: PenyediaAi = PenyediaAi.GEMINI,
+    val model: String = penyedia.modelBawaan,
     val adaKunci: Boolean = false,
     /** Lets Hanako propose changes to the app (the user still approves each one). Only matters in online mode. */
     val aksiAktif: Boolean = true,
+    /** Every service that has a stored key, so the settings can show which ones are ready to switch to. */
+    val penyediaBerkunci: Set<PenyediaAi> = emptySet(),
 ) {
     val online: Boolean get() = onlineAktif && adaKunci
 
@@ -26,16 +30,24 @@ object NamaModel {
      */
     const val BAWAAN = "gemini-flash-latest"
 
-    private val POLA = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+    /** Gemini puts the name in the URL path, so it gets the strictest pattern. */
+    private val POLA_GEMINI = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
-    /** Trims, accepts a pasted `models/<name>` and cuts to 64 characters. */
-    fun bersihkan(mentah: String): String = mentah.trim().removePrefix("models/").trim().take(64)
+    /** Groq and DeepSeek send the name inside the JSON body, where a slash (`openai/gpt-oss-20b`) is normal. */
+    private val POLA_BODI = Regex("^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$")
 
-    /** Only letters, digits, dot, dash and underscore: the name goes into the request URL path. */
-    fun sah(nama: String): Boolean = POLA.matches(nama)
+    /** Trims and cuts to 64 characters; for Gemini it also accepts a pasted `models/<name>`. */
+    fun bersihkan(mentah: String, penyedia: PenyediaAi = PenyediaAi.GEMINI): String {
+        val rapi = mentah.trim()
+        val tanpaAwalan = if (penyedia == PenyediaAi.GEMINI) rapi.removePrefix("models/").trim() else rapi
+        return tanpaAwalan.take(64)
+    }
+
+    fun sah(nama: String, penyedia: PenyediaAi = PenyediaAi.GEMINI): Boolean =
+        (if (penyedia == PenyediaAi.GEMINI) POLA_GEMINI else POLA_BODI).matches(nama)
 }
 
-object KunciGemini {
+object KunciAi {
     const val MIN_PANJANG = 20
     const val MAKS_PANJANG = 256
     private val POLA = Regex("^[A-Za-z0-9_.~-]+$")
@@ -44,7 +56,7 @@ object KunciGemini {
     fun bersihkan(mentah: String): String =
         mentah.filter { !it.isWhitespace() && it != '"' && it != '\'' }.take(MAKS_PANJANG + 1)
 
-    /** A plausibility check only (Google decides whether the key really works). */
+    /** A plausibility check only (the provider decides whether the key really works). */
     fun masukAkal(kunci: String): Boolean =
         kunci.length in MIN_PANJANG..MAKS_PANJANG && POLA.matches(kunci)
 }

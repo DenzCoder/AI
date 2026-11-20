@@ -59,6 +59,7 @@ import id.asisten.app.R
 import id.asisten.app.domain.hanako.EkspresiHanako
 import id.asisten.app.domain.hanako.JenisGalat
 import id.asisten.app.domain.hanako.LabelHanako
+import id.asisten.app.domain.hanako.PenyediaAi
 import id.asisten.app.domain.hanako.PeranChat
 import id.asisten.app.domain.hanako.PesanChat
 import id.asisten.app.domain.hanako.PilihEkspresi
@@ -70,14 +71,14 @@ import id.asisten.app.ui.wadahViewModel
 import java.time.LocalTime
 
 /**
- * The "AI Hanako" tab: a chat with Hanako, plus her settings (Gemini key, model, what she may see).
- * Without a key she answers from the data on the phone only (PenjawabLokal); with a key she uses Gemini.
+ * The "AI Hanako" tab: a chat with Hanako, plus her settings (AI service, key, model, what she may see).
+ * Without a key she answers from the data on the phone only (PenjawabLokal); with a key she uses the chosen service.
  */
 @Composable
 fun HanakoScreen(modifier: Modifier = Modifier) {
     val vm = wadahViewModel {
         HanakoViewModel(
-            it.hanako, it.pengaturan, it.jadwal, it.aktivitas, it.memori, it.klienGemini, it.suara, it.pembaca, it.pelaksanaAksi,
+            it.hanako, it.pengaturan, it.jadwal, it.aktivitas, it.memori, it.klienAi, it.suara, it.pembaca, it.pelaksanaAksi,
         )
     }
     var tampilPengaturan by rememberSaveable { mutableStateOf(false) }
@@ -138,6 +139,7 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
     }
 
     val online = pengaturan?.online == true
+    val penyedia = pengaturan?.penyedia ?: PenyediaAi.GEMINI
     val ekspresiTerakhir = riwayat.lastOrNull { it.peran == PeranChat.HANAKO && !it.aksi }?.ekspresi
     val ekspresi = PilihEkspresi.untukChat(sedangMenjawab, galat?.jenis, ekspresiTerakhir, LocalTime.now())
 
@@ -161,7 +163,7 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = LabelHanako.status(online),
+                    text = LabelHanako.status(online, penyedia),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -203,6 +205,7 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
         galat?.let { g ->
             KartuGalat(
                 jenis = g.jenis,
+                penyedia = g.penyedia,
                 rinci = g.rinci,
                 onCobaLagi = { vm.cobaLagi() },
                 onPengaturan = {
@@ -404,6 +407,7 @@ private fun BalonMenunggu() {
 @Composable
 private fun KartuGalat(
     jenis: JenisGalat,
+    penyedia: PenyediaAi,
     rinci: String,
     onCobaLagi: () -> Unit,
     onPengaturan: () -> Unit,
@@ -415,7 +419,7 @@ private fun KartuGalat(
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                text = LabelHanako.galat(jenis),
+                text = LabelHanako.galat(jenis, penyedia),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )

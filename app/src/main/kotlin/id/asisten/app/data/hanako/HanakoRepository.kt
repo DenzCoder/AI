@@ -6,9 +6,10 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import id.asisten.app.domain.hanako.KunciGemini
+import id.asisten.app.domain.hanako.KunciAi
 import id.asisten.app.domain.hanako.NamaModel
 import id.asisten.app.domain.hanako.PengaturanHanako
+import id.asisten.app.domain.hanako.PenyediaAi
 import id.asisten.app.domain.hanako.PesanChat
 import id.asisten.app.domain.hanako.RiwayatChat
 import id.asisten.app.domain.hanako.RiwayatChatCodec
@@ -31,11 +32,23 @@ private object KunciHanako {
     val RIWAYAT = stringPreferencesKey("hanako_riwayat")
     val AKSI_AKTIF = booleanPreferencesKey("hanako_aksi_aktif")
     val USULAN = stringPreferencesKey("hanako_usulan")
+    val PENYEDIA = stringPreferencesKey("hanako_penyedia")
+
+    /**
+     * Gemini keeps the original key names (so an existing key and model survive the update); the other services
+     * get their own, so each service has its own key and its own model name.
+     */
+    fun kunci(p: PenyediaAi): Preferences.Key<String> =
+        if (p == PenyediaAi.GEMINI) KUNCI_TERENKRIPSI else stringPreferencesKey("hanako_kunci_terenkripsi_${p.kode}")
+
+    fun model(p: PenyediaAi): Preferences.Key<String> =
+        if (p == PenyediaAi.GEMINI) MODEL else stringPreferencesKey("hanako_model_${p.kode}")
 }
 
 /**
- * Hanako chat settings, the encrypted Gemini key and the chat history, in the same DataStore as the other
- * settings (new keys only; Room is untouched). The key is exposed only through [kunci], on demand and decrypted.
+ * Hanako chat settings, the encrypted API keys (one per AI service) and the chat history, in the same DataStore as
+ * the other settings (new keys only; Room is untouched). A key is exposed only through [kunci], on demand and
+ * decrypted.
  */
 class HanakoRepository(
     private val penyimpanan: DataStore<Preferences>,
@@ -46,12 +59,15 @@ class HanakoRepository(
     }
 
     val pengaturan: Flow<PengaturanHanako> = data.map { p ->
+        val penyedia = PenyediaAi.dariKode(p[KunciHanako.PENYEDIA])
         PengaturanHanako(
             onlineAktif = p[KunciHanako.ONLINE_AKTIF] ?: false,
             bagikanData = p[KunciHanako.BAGIKAN_DATA] ?: true,
-            model = p[KunciHanako.MODEL]?.takeIf { NamaModel.sah(it) } ?: NamaModel.BAWAAN,
-            adaKunci = !p[KunciHanako.KUNCI_TERENKRIPSI].isNullOrEmpty(),
+            penyedia = penyedia,
+            model = p[KunciHanako.model(penyedia)]?.takeIf { NamaModel.sah(it, penyedia) } ?: penyedia.modelBawaan,
+            adaKunci = !p[KunciHanako.kunci(penyedia)].isNullOrEmpty(),
             aksiAktif = p[KunciHanako.AKSI_AKTIF] ?: true,
+            penyediaBerkunci = PenyediaAi.entries.filter { !p[KunciHanako.kunci(it)].isNullOrEmpty() }.toSet(),
         )
     }.distinctUntilChanged()
 
@@ -62,33 +78,41 @@ class HanakoRepository(
     val usulan: Flow<List<UsulanMentah>> =
         data.map { RiwayatUsulan.decode(it[KunciHanako.USULAN]) }.distinctUntilChanged()
 
-    /** The decrypted key, or null when none is stored or it cannot be read (then the user must enter it again). */
-    suspend fun kunci(): String? {
-        val tersimpan = data.first()[KunciHanako.KUNCI_TERENKRIPSI]
+    /** The decrypted key of [penyedia], or null when none is stored or it cannot be read (then it must be entered again). */
+    suspend fun kunci(penyedia: PenyediaAi): String? {
+        val tersimpan = data.first()[KunciHanako.kunci(penyedia)]
         if (tersimpan.isNullOrEmpty()) return null
         return withContext(Dispatchers.IO) { pengacak.buka(tersimpan) }
     }
 
     /**
-     * Cleans, checks and stores the key encrypted, and switches online mode on. Returns false (and stores nothing)
-     * when the key looks wrong or this phone cannot encrypt it: it is never stored as plain text.
+     * Cleans, checks and stores the key of [penyedia] encrypted, makes it the service in use and switches online
+     * mode on. Returns false (and stores nothing) when the key looks wrong or this phone cannot encrypt it: it is
+     * never stored as plain text.
      */
-    suspend fun simpanKunci(mentah: String): Boolean {
-        val bersih = KunciGemini.bersihkan(mentah)
-        if (!KunciGemini.masukAkal(bersih)) return false
+    suspend fun simpanKunci(penyedia: PenyediaAi, mentah: String): Boolean {
+        val bersih = KunciAi.bersihkan(mentah)
+        if (!KunciAi.masukAkal(bersih)) return false
         val terkode = withContext(Dispatchers.IO) { pengacak.acak(bersih) } ?: return false
         penyimpanan.edit { p ->
-            p[KunciHanako.KUNCI_TERENKRIPSI] = terkode
+            p[KunciHanako.kunci(penyedia)] = terkode
+            p[KunciHanako.PENYEDIA] = penyedia.kode
             p[KunciHanako.ONLINE_AKTIF] = true
         }
         return true
     }
 
-    suspend fun hapusKunci() {
+    /** Online mode is switched off only when the removed key belongs to the service in use. */
+    suspend fun hapusKunci(penyedia: PenyediaAi) {
         penyimpanan.edit { p ->
-            p.remove(KunciHanako.KUNCI_TERENKRIPSI)
-            p[KunciHanako.ONLINE_AKTIF] = false
+            p.remove(KunciHanako.kunci(penyedia))
+            if (PenyediaAi.dariKode(p[KunciHanako.PENYEDIA]) == penyedia) p[KunciHanako.ONLINE_AKTIF] = false
         }
+    }
+
+    /** Picks the service in use. Keys and models of the other services stay stored. */
+    suspend fun ubahPenyedia(penyedia: PenyediaAi) {
+        penyimpanan.edit { it[KunciHanako.PENYEDIA] = penyedia.kode }
     }
 
     suspend fun ubahOnline(aktif: Boolean) {
@@ -103,10 +127,10 @@ class HanakoRepository(
         penyimpanan.edit { it[KunciHanako.BAGIKAN_DATA] = bagikan }
     }
 
-    /** An invalid name is replaced by the default rather than stored. */
-    suspend fun ubahModel(mentah: String) {
-        val nama = NamaModel.bersihkan(mentah).takeIf { NamaModel.sah(it) } ?: NamaModel.BAWAAN
-        penyimpanan.edit { it[KunciHanako.MODEL] = nama }
+    /** An invalid name is replaced by the service's default rather than stored. */
+    suspend fun ubahModel(penyedia: PenyediaAi, mentah: String) {
+        val nama = NamaModel.bersihkan(mentah, penyedia).takeIf { NamaModel.sah(it, penyedia) } ?: penyedia.modelBawaan
+        penyimpanan.edit { it[KunciHanako.model(penyedia)] = nama }
     }
 
     /** Read-modify-write inside one `edit {}` so two quick messages cannot overwrite each other. */

@@ -10,7 +10,7 @@ class ProtokolGeminiTest {
     private fun u(isi: String) = PesanChat(PeranChat.PENGGUNA, isi)
     private fun h(isi: String) = PesanChat(PeranChat.HANAKO, isi, EkspresiHanako.SENYUM)
 
-    private fun gagal(hasil: HasilGemini) = hasil as HasilGemini.Gagal
+    private fun gagal(hasil: HasilAi) = hasil as HasilAi.Gagal
 
     // --- request body ---
 
@@ -48,20 +48,20 @@ class ProtokolGeminiTest {
     @Test
     fun membacaTeksJawabanBiasa() {
         val badan = """{"candidates":[{"content":{"role":"model","parts":[{"text":"[senyum] Halo!"}]},"finishReason":"STOP"}]}"""
-        assertEquals(HasilGemini.Berhasil("[senyum] Halo!"), UraiResponsGemini.urai(200, badan))
+        assertEquals(HasilAi.Berhasil("[senyum] Halo!"), UraiResponsGemini.urai(200, badan))
     }
 
     @Test
     fun menggabungkanBeberapaBagianDanMelewatiPikiran() {
         val badan = """{"candidates":[{"content":{"parts":[
             {"text":"rahasia pikiran","thought":true},{"text":"Halo "},{"text":"dunia"}]}}]}"""
-        assertEquals(HasilGemini.Berhasil("Halo dunia"), UraiResponsGemini.urai(200, badan))
+        assertEquals(HasilAi.Berhasil("Halo dunia"), UraiResponsGemini.urai(200, badan))
     }
 
     @Test
     fun jawabanTerpotongTapiAdaTeksTetapDipakai() {
         val badan = """{"candidates":[{"content":{"parts":[{"text":"Separuh jawaban"}]},"finishReason":"MAX_TOKENS"}]}"""
-        assertEquals(HasilGemini.Berhasil("Separuh jawaban"), UraiResponsGemini.urai(200, badan))
+        assertEquals(HasilAi.Berhasil("Separuh jawaban"), UraiResponsGemini.urai(200, badan))
     }
 
     @Test

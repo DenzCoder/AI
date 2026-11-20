@@ -3,7 +3,7 @@ package id.asisten.app
 import android.app.Application
 import android.content.Context
 import android.util.Log
-import id.asisten.app.data.ai.KlienGemini
+import id.asisten.app.data.ai.KlienAi
 import id.asisten.app.data.db.AsistenDatabase
 import id.asisten.app.data.hanako.HanakoRepository
 import id.asisten.app.data.hanako.PelaksanaAksi
@@ -38,7 +38,7 @@ class WadahAplikasi(context: Context) {
     val aktivitas: AktivitasRepository by lazy { AktivitasRepository(database.tugasDao(), database.tujuanDao()) }
     val hanako: HanakoRepository by lazy { HanakoRepository(app.penyimpananPengaturan, PengacakKeystore()) }
     val pelaksanaAksi: PelaksanaAksi by lazy { PelaksanaAksi(jadwal, aktivitas, pengaturan) }
-    val klienGemini: KlienGemini by lazy { KlienGemini() }
+    val klienAi: KlienAi by lazy { KlienAi() }
     val suara: SuaraRepository by lazy { SuaraRepository(app.penyimpananPengaturan) }
     val pembaca: PembacaSuara by lazy { PembacaSuara(app) }
 

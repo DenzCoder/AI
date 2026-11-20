@@ -157,4 +157,62 @@ class DeklarasiAksiTest {
         assertFalse(json.contains("key"))
         assertFalse(json.contains("thinking"))
     }
+
+    // ---------- bentuk OpenAI (Groq, DeepSeek) ----------
+
+    private val alatOpenAi = DeklarasiAksi.alatOpenAi.map { it as Map<*, *> }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun isiFungsi(a: Map<*, *>) = a["function"] as Map<String, Any?>
+
+    @Test
+    fun bentukOpenAiMemuatFungsiYangSamaDenganGemini() {
+        assertEquals(NamaAksi.SEMUA, alatOpenAi.map { isiFungsi(it)["name"] })
+        assertEquals(fungsi.map { it["description"] }, alatOpenAi.map { isiFungsi(it)["description"] })
+        assertTrue(alatOpenAi.all { it["type"] == "function" })
+    }
+
+    @Test
+    fun jenisSkemaMenjadiHurufKecilTanpaMengubahIsiPilihan() {
+        val teks = DeklarasiAksi.alatOpenAi.let { MiniJson.tulis(it) }
+        for (besar in listOf("\"STRING\"", "\"INTEGER\"", "\"BOOLEAN\"", "\"OBJECT\"")) assertFalse(besar, teks.contains(besar))
+        assertTrue(teks.contains("\"type\":\"string\""))
+        assertTrue(teks.contains("\"type\":\"integer\""))
+        assertTrue(teks.contains("\"type\":\"boolean\""))
+        // nilai pilihan (enum) tetap huruf besar karena itulah yang dibaca UraiAksi
+        val tambah = alatOpenAi.map { isiFungsi(it) }.first { it["name"] == NamaAksi.TAMBAH_TUGAS }
+        @Suppress("UNCHECKED_CAST")
+        val sifat = (tambah["parameters"] as Map<String, Any?>)["properties"] as Map<String, Map<String, Any?>>
+        assertEquals(listOf("TUGAS", "PR", "UJIAN"), sifat["jenis"]!!["enum"])
+    }
+
+    @Test
+    fun setiapFungsiOpenAiPunyaParametersObjekBahkanTanpaBidang() {
+        for (a in alatOpenAi) {
+            val f = isiFungsi(a)
+            @Suppress("UNCHECKED_CAST")
+            val p = f["parameters"] as Map<String, Any?>
+            assertEquals(f["name"].toString(), "object", p["type"])
+            assertTrue(p["properties"] is Map<*, *>)
+        }
+        val akhiri = alatOpenAi.map { isiFungsi(it) }.first { it["name"] == NamaAksi.AKHIRI_MODE }
+        @Suppress("UNCHECKED_CAST")
+        assertTrue(((akhiri["parameters"] as Map<String, Any?>)["properties"] as Map<*, *>).isEmpty())
+    }
+
+    @Test
+    fun bentukOpenAiTidakMengubahDeklarasiGemini() {
+        val teks = DeklarasiAksi.json()
+        assertTrue(teks.contains("\"type\":\"OBJECT\""))
+        assertTrue(teks.contains("\"type\":\"STRING\""))
+    }
+
+    @Test
+    fun bidangWajibDanSifatSamaDiKeduaBentuk() {
+        for ((g, o) in fungsi.zip(alatOpenAi.map { isiFungsi(it) })) {
+            assertEquals(g["name"].toString(), wajib(g), wajib(o))
+            assertEquals(g["name"].toString(), sifat(g).keys, sifat(o).keys)
+        }
+    }
 }
+

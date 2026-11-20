@@ -190,4 +190,25 @@ object DeklarasiAksi {
 
     /** [alat] as JSON text, ready to put into the request body. */
     fun json(): String = MiniJson.tulis(alat)
+
+    /** JSON-schema types are lower case in the OpenAI-style protocol (`string`, not `STRING`). */
+    private fun huruf(nilai: Any?): Any? = when (nilai) {
+        is Map<*, *> -> nilai.entries.associate { (k, v) ->
+            k to if (k == "type" && v is String) v.lowercase() else huruf(v)
+        }
+        is List<*> -> nilai.map { huruf(it) }
+        else -> nilai
+    }
+
+    /**
+     * The same functions in the OpenAI-style shape used by Groq and DeepSeek:
+     * `{"type":"function","function":{name, description, parameters}}`. A function without fields gets an empty
+     * object schema, because that protocol expects `parameters` to be present.
+     */
+    val alatOpenAi: List<Any?> = fungsiAksi.map { f ->
+        val isi = LinkedHashMap<String, Any?>()
+        for ((k, v) in f) if (k != "parameters") isi[k] = v
+        isi["parameters"] = huruf(f["parameters"] ?: mapOf("type" to "OBJECT", "properties" to emptyMap<String, Any?>()))
+        mapOf("type" to "function", "function" to isi)
+    }
 }

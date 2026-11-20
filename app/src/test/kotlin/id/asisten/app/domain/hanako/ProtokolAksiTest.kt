@@ -10,10 +10,10 @@ class ProtokolAksiTest {
     private fun respons(vararg bagian: String) =
         """{"candidates":[{"content":{"role":"model","parts":[${bagian.joinToString(",")}]},"finishReason":"STOP"}]}"""
 
-    private fun berhasil(badan: String): HasilGemini.Berhasil {
+    private fun berhasil(badan: String): HasilAi.Berhasil {
         val hasil = UraiResponsGemini.urai(200, badan)
-        assertTrue("diharapkan berhasil, tetapi $hasil", hasil is HasilGemini.Berhasil)
-        return hasil as HasilGemini.Berhasil
+        assertTrue("diharapkan berhasil, tetapi $hasil", hasil is HasilAi.Berhasil)
+        return hasil as HasilAi.Berhasil
     }
 
     @Test
@@ -90,14 +90,14 @@ class ProtokolAksiTest {
     @Test
     fun tanpaTeksDanTanpaPanggilanTetapKosong() {
         val hasil = UraiResponsGemini.urai(200, respons("""{"functionCall":{"args":{}}}"""))
-        assertEquals(JenisGalat.KOSONG, (hasil as HasilGemini.Gagal).jenis)
+        assertEquals(JenisGalat.KOSONG, (hasil as HasilAi.Gagal).jenis)
         val diblokir = UraiResponsGemini.urai(200, """{"candidates":[{"finishReason":"SAFETY"}]}""")
-        assertEquals(JenisGalat.DIBLOKIR, (diblokir as HasilGemini.Gagal).jenis)
+        assertEquals(JenisGalat.DIBLOKIR, (diblokir as HasilAi.Gagal).jenis)
     }
 
     @Test
     fun hasilBerhasilTanpaPanggilanTetapKompatibel() {
-        assertEquals(HasilGemini.Berhasil("a", emptyList()), HasilGemini.Berhasil("a"))
+        assertEquals(HasilAi.Berhasil("a", emptyList()), HasilAi.Berhasil("a"))
     }
 
     @Test
