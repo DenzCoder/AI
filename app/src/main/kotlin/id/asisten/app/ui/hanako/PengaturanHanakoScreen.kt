@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,8 +45,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.asisten.app.R
 import id.asisten.app.domain.hanako.LabelHanako
 import id.asisten.app.domain.hanako.PenyediaAi
+import id.asisten.app.domain.suara.DaftarVoice
 import id.asisten.app.domain.suara.LabelSuara
+import id.asisten.app.domain.suara.PaketSuara
 import id.asisten.app.domain.suara.PilihanSuara
+import id.asisten.app.domain.suara.StatusSuara
 import id.asisten.app.ui.komponen.BarisPilihan
 import id.asisten.app.ui.komponen.DialogKonfirmasi
 import id.asisten.app.ui.komponen.JudulBagian
@@ -60,6 +66,7 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
     val konteks = LocalContext.current
     val pengaturanSuara by vm.pengaturanSuara.collectAsStateWithLifecycle()
     val statusSuara by vm.statusSuara.collectAsStateWithLifecycle()
+    val daftarSuara by vm.daftarSuara.collectAsStateWithLifecycle()
     // Starting the speech engine tells us whether Indonesian is available; it is released when the chat is closed.
     LaunchedEffect(Unit) { vm.periksaSuara() }
 
@@ -247,6 +254,14 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
                 aktif = true,
                 onUbah = vm::ubahBacaOtomatis,
             )
+            Text(stringResource(R.string.hanako_suara_paket), style = MaterialTheme.typography.bodyLarge)
+            BarisPilihan(
+                opsi = PaketSuara.SEMUA,
+                terpilih = PaketSuara.cocok(pengaturanSuara),
+                label = { it.nama },
+                onPilih = vm::terapkanPaket,
+            )
+            TeksPetunjuk(stringResource(R.string.hanako_suara_paket_ket))
             Text(stringResource(R.string.hanako_suara_kecepatan), style = MaterialTheme.typography.bodyLarge)
             BarisPilihan(
                 opsi = PilihanSuara.KECEPATAN.map { it.first },
@@ -261,6 +276,30 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
                 label = { v -> PilihanSuara.NADA.first { it.first == v }.second },
                 onPilih = vm::ubahNada,
             )
+            Text(stringResource(R.string.hanako_suara_mesin), style = MaterialTheme.typography.bodyLarge)
+            TeksPetunjuk(stringResource(R.string.hanako_suara_mesin_ket))
+            val contoh = stringResource(R.string.hanako_suara_contoh)
+            // A stored voice the engine no longer has counts as "engine default", which is what is really spoken.
+            val dipilih = DaftarVoice.yangDipilih(daftarSuara, pengaturanSuara.suara)
+            BarisSuaraMesin(
+                judul = stringResource(R.string.hanako_suara_bawaan_mesin),
+                keterangan = null,
+                terpilih = dipilih == null,
+                onPilih = { vm.pilihSuara(null) },
+                onDengar = { vm.dengarSuara(null, contoh) },
+            )
+            daftarSuara.forEachIndexed { indeks, voice ->
+                BarisSuaraMesin(
+                    judul = DaftarVoice.nama(indeks + 1),
+                    keterangan = DaftarVoice.keterangan(voice) + " · " + voice.id,
+                    terpilih = dipilih?.id == voice.id,
+                    onPilih = { vm.pilihSuara(voice.id) },
+                    onDengar = { vm.dengarSuara(voice.id, contoh) },
+                )
+            }
+            if (daftarSuara.isEmpty() && statusSuara == StatusSuara.SIAP) {
+                TeksPetunjuk(stringResource(R.string.hanako_suara_mesin_kosong))
+            }
             statusSuara?.let { Text(LabelSuara.status(it), style = MaterialTheme.typography.bodyMedium) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { vm.bacaKeras(konteks.getString(R.string.hanako_suara_contoh)) }) {
@@ -334,3 +373,29 @@ private fun BarisSakelar(
         Switch(checked = nyala, onCheckedChange = onUbah, enabled = aktif)
     }
 }
+
+@Composable
+private fun BarisSuaraMesin(
+    judul: String,
+    keterangan: String?,
+    terpilih: Boolean,
+    onPilih: () -> Unit,
+    onDengar: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = terpilih, onClick = onPilih, role = Role.RadioButton)
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        RadioButton(selected = terpilih, onClick = null)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = judul, style = MaterialTheme.typography.bodyLarge)
+            if (keterangan != null) TeksPetunjuk(keterangan)
+        }
+        TextButton(onClick = onDengar) { Text(stringResource(R.string.hanako_suara_dengar)) }
+    }
+}
+

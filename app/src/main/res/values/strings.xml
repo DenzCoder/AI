@@ -77,8 +77,15 @@
     <string name="hanako_suara_ket">Tombol mikrofon memakai pengenalan suara Google di ponselmu: biasanya butuh internet, dan audionya diproses oleh Google, bukan oleh aplikasi ini. Hanako berbicara memakai mesin suara bawaan ponsel. Aplikasi tidak mendengarkan terus-menerus; mikrofon hanya aktif saat kamu menekan tombolnya.</string>
     <string name="hanako_suara_otomatis">Bacakan balasan otomatis</string>
     <string name="hanako_suara_otomatis_ket">Setiap balasan baru Hanako langsung dibacakan. Matikan kalau kamu lebih suka menekan ikon pengeras suara sendiri.</string>
+    <string name="hanako_suara_paket">Paket suara</string>
+    <string name="hanako_suara_paket_ket">Satu ketukan mengatur kecepatan dan nada sekaligus. "Imut" dan "Imut banget" membuat suaranya lebih tinggi dan lincah. Dasarnya tetap suara dari mesin suara ponselmu; aplikasi ini belum punya suara karakter buatan sendiri.</string>
     <string name="hanako_suara_kecepatan">Kecepatan bicara</string>
     <string name="hanako_suara_nada">Nada suara</string>
+    <string name="hanako_suara_mesin">Suara dari mesin</string>
+    <string name="hanako_suara_mesin_ket">Daftar suara bahasa Indonesia yang dilaporkan mesin suara ponselmu. Android tidak memberi tahu mana yang perempuan atau laki-laki, jadi tekan Dengar dan pilih yang paling kamu suka. Suara yang butuh internet tidak jalan tanpa koneksi.</string>
+    <string name="hanako_suara_bawaan_mesin">Bawaan mesin</string>
+    <string name="hanako_suara_dengar">Dengar</string>
+    <string name="hanako_suara_mesin_kosong">Mesin suara ponselmu tidak melaporkan pilihan suara. Hanako memakai suara bawaannya.</string>
     <string name="hanako_suara_uji">Uji suara</string>
     <string name="hanako_suara_contoh">Halo, aku Hanako. Beginilah suaraku.</string>
     <string name="hanako_suara_pasang">Pasang data suara</string>

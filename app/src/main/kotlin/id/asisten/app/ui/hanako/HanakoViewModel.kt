@@ -35,6 +35,7 @@ import id.asisten.app.domain.hanako.UsulanMentah
 import id.asisten.app.domain.hanako.UsulanTampil
 import id.asisten.app.domain.jadwal.PenyusunHarian
 import id.asisten.app.domain.memori.KonteksAi
+import id.asisten.app.domain.suara.PaketSuara
 import id.asisten.app.domain.suara.PengaturanSuara
 import id.asisten.app.suara.PembacaSuara
 import java.time.LocalDate
@@ -117,6 +118,7 @@ class HanakoViewModel(
         suara.pengaturan.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PengaturanSuara())
     val sedangBicara = pembaca.sedangBicara
     val statusSuara = pembaca.status
+    val daftarSuara = pembaca.daftarSuara
 
     private val _pesanKunci = MutableStateFlow<PesanKunci?>(null)
     val pesanKunci: StateFlow<PesanKunci?> = _pesanKunci.asStateFlow()
@@ -410,7 +412,25 @@ class HanakoViewModel(
 
     fun bacaKeras(teks: String) {
         val p = pengaturanSuara.value
-        pembaca.bicara(teks, p.kecepatan, p.nada)
+        pembaca.bicara(teks, p.kecepatan, p.nada, p.suara)
+    }
+
+    /** Lets the user hear voice [id] with the current speed and pitch, without choosing it yet. */
+    fun dengarSuara(id: String?, teks: String) {
+        val p = pengaturanSuara.value
+        pembaca.bicara(teks, p.kecepatan, p.nada, id)
+    }
+
+    fun pilihSuara(id: String?) {
+        viewModelScope.launch { suara.ubahSuara(id) }
+    }
+
+    /** Sets speed and pitch together (for example "Imut"). */
+    fun terapkanPaket(paket: PaketSuara) {
+        viewModelScope.launch {
+            suara.ubahKecepatan(paket.kecepatan)
+            suara.ubahNada(paket.nada)
+        }
     }
 
     fun berhenti() {

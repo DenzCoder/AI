@@ -7,9 +7,15 @@ data class PengaturanSuara(
     val bacaOtomatis: Boolean = false,
     val kecepatan: Float = 1.0f,
     val nada: Float = 1.0f,
+    /** The engine's own name of the chosen voice ([InfoVoice.id]); null means the engine's default Indonesian voice. */
+    val suara: String? = null,
 ) {
     /** Stored values can be missing or odd (NaN, out of range): bring them back to what the engine accepts. */
-    fun normalisasi(): PengaturanSuara = copy(kecepatan = jepit(kecepatan), nada = jepit(nada))
+    fun normalisasi(): PengaturanSuara = copy(
+        kecepatan = jepit(kecepatan),
+        nada = jepit(nada),
+        suara = suara?.trim()?.take(MAKS_NAMA_SUARA)?.takeIf { it.isNotEmpty() },
+    )
 
     private fun jepit(nilai: Float): Float =
         if (nilai.isNaN() || nilai.isInfinite()) 1.0f else nilai.coerceIn(MIN, MAKS)
@@ -17,12 +23,27 @@ data class PengaturanSuara(
     companion object {
         const val MIN = 0.5f
         const val MAKS = 2.0f
+        const val MAKS_NAMA_SUARA = 120
+    }
+}
+
+/** A one-tap combination of speed and pitch. */
+data class PaketSuara(val nama: String, val kecepatan: Float, val nada: Float) {
+    companion object {
+        val NORMAL = PaketSuara("Normal", 1.0f, 1.0f)
+        val IMUT = PaketSuara("Imut", 1.1f, 1.4f)
+        val IMUT_BANGET = PaketSuara("Imut banget", 1.15f, 1.7f)
+        val SEMUA = listOf(NORMAL, IMUT, IMUT_BANGET)
+
+        /** The package that matches the current values, or null when the user tuned speed and pitch by hand. */
+        fun cocok(p: PengaturanSuara): PaketSuara? =
+            SEMUA.firstOrNull { abs(it.kecepatan - p.kecepatan) < 0.01f && abs(it.nada - p.nada) < 0.01f }
     }
 }
 
 object PilihanSuara {
     val KECEPATAN = listOf(0.8f to "Lambat", 1.0f to "Normal", 1.25f to "Cepat")
-    val NADA = listOf(0.85f to "Rendah", 1.0f to "Normal", 1.15f to "Tinggi")
+    val NADA = listOf(0.85f to "Rendah", 1.0f to "Normal", 1.15f to "Tinggi", 1.4f to "Imut", 1.7f to "Imut banget")
 
     /** The option closest to [nilai], so a chip is highlighted even when the stored value is not exactly one of them. */
     fun terdekat(nilai: Float, pilihan: List<Pair<Float, String>>): Float =

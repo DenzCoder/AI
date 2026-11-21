@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import id.asisten.app.domain.suara.PengaturanSuara
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +18,7 @@ private object KunciSuara {
     val BACA_OTOMATIS = booleanPreferencesKey("suara_baca_otomatis")
     val KECEPATAN = floatPreferencesKey("suara_kecepatan")
     val NADA = floatPreferencesKey("suara_nada")
+    val SUARA = stringPreferencesKey("suara_pilihan")
 }
 
 /** Voice settings in the shared DataStore (new keys only). Stored values are normalised when read. */
@@ -29,6 +31,7 @@ class SuaraRepository(private val penyimpanan: DataStore<Preferences>) {
                 bacaOtomatis = p[KunciSuara.BACA_OTOMATIS] ?: false,
                 kecepatan = p[KunciSuara.KECEPATAN] ?: 1.0f,
                 nada = p[KunciSuara.NADA] ?: 1.0f,
+                suara = p[KunciSuara.SUARA],
             ).normalisasi()
         }
         .distinctUntilChanged()
@@ -43,5 +46,11 @@ class SuaraRepository(private val penyimpanan: DataStore<Preferences>) {
 
     suspend fun ubahNada(nilai: Float) {
         penyimpanan.edit { it[KunciSuara.NADA] = PengaturanSuara(nada = nilai).normalisasi().nada }
+    }
+
+    /** [id] null goes back to the engine's default voice. */
+    suspend fun ubahSuara(id: String?) {
+        val bersih = PengaturanSuara(suara = id).normalisasi().suara
+        penyimpanan.edit { if (bersih == null) it.remove(KunciSuara.SUARA) else it[KunciSuara.SUARA] = bersih }
     }
 }
