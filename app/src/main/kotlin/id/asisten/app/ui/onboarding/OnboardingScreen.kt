@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,7 +29,10 @@ import id.asisten.app.ui.hanako.HanakoAvatar
 import id.asisten.app.ui.komponen.BarisPilihan
 import id.asisten.app.ui.komponen.FieldTeks
 import id.asisten.app.ui.komponen.JudulBagian
+import id.asisten.app.ui.komponen.JudulHalaman
 import id.asisten.app.ui.komponen.TeksPetunjuk
+import id.asisten.app.ui.komponen.TombolNeo
+import id.asisten.app.ui.komponen.TombolTeksNeo
 
 private const val JUMLAH_LANGKAH = 5
 private const val LANGKAH_NAMA = 1
@@ -83,11 +84,7 @@ fun OnboardingScreen(
         ) {
             when (langkah) {
                 0 -> {
-                    Text(
-                        text = "Halo, aku Hanako!",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    JudulHalaman("Halo, aku Hanako!")
                     Text(
                         text = "Aku akan menemanimu di ASISTEN, aplikasi untuk mengatur jadwal, tugas, " +
                             "dan kebiasaan sehari-hari. Kamu tidak perlu membuat akun. " +
@@ -97,11 +94,7 @@ fun OnboardingScreen(
                 }
 
                 1 -> {
-                    Text(
-                        text = "Aku harus panggil kamu siapa?",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    JudulHalaman("Aku harus panggil kamu siapa?")
                     FieldTeks(
                         label = "Nama panggilan",
                         nilai = nama,
@@ -111,11 +104,7 @@ fun OnboardingScreen(
                 }
 
                 2 -> {
-                    Text(
-                        text = "Atur tampilan",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    JudulHalaman("Atur tampilan")
                     JudulBagian("Tema")
                     BarisPilihan(
                         opsi = ModeTema.entries,
@@ -134,11 +123,7 @@ fun OnboardingScreen(
                 }
 
                 3 -> {
-                    Text(
-                        text = "Privasi dan memori",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    JudulHalaman("Privasi dan memori")
                     Text(
                         text = "Datamu tersimpan di perangkat ini. Isi jurnal tidak akan dikirim ke AI " +
                             "kecuali kamu sendiri yang memintanya.",
@@ -166,11 +151,7 @@ fun OnboardingScreen(
                 }
 
                 else -> {
-                    Text(
-                        text = "Hampir selesai",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    JudulHalaman("Hampir selesai")
                     Text(
                         text = "Jadwal sekolah bisa kamu atur kapan saja di tab Jadwal, bagian Sekolah. " +
                             "Pengaturan sholat dan kebiasaan akan hadir di pembaruan berikutnya.",
@@ -186,12 +167,12 @@ fun OnboardingScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (langkah > 0) {
-                TextButton(onClick = { langkah -= 1 }) { Text("Kembali") }
+                TombolTeksNeo(onClick = { langkah -= 1 }) { Text("Kembali") }
             } else {
                 Text("")
             }
             val terakhir = langkah == JUMLAH_LANGKAH - 1
-            Button(
+            TombolNeo(
                 onClick = { if (terakhir) onSelesai(nama, memori) else langkah += 1 },
                 enabled = langkah != LANGKAH_NAMA || namaValid,
             ) {

@@ -11,12 +11,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +39,9 @@ import id.asisten.app.ui.komponen.TeksPetunjuk
 import id.asisten.app.ui.komponen.TombolHapus
 import id.asisten.app.ui.komponen.TombolUbah
 import id.asisten.app.ui.wadahViewModel
+import id.asisten.app.ui.komponen.TombolNeo
+import id.asisten.app.ui.komponen.TombolTepiNeo
+import id.asisten.app.ui.komponen.KartuNeo
 
 private class FormMemori(val lama: ItemMemori?)
 
@@ -76,7 +76,7 @@ fun MemoriScreen(
             }
         }
         item(key = "saklar") {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            KartuNeo(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -101,9 +101,9 @@ fun MemoriScreen(
         }
         item(key = "aksi") {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { form = FormMemori(null) }) { Text("Tambah memori") }
+                TombolNeo(onClick = { form = FormMemori(null) }) { Text("Tambah memori") }
                 if (daftar.isNotEmpty()) {
-                    OutlinedButton(onClick = { hapusSemua = true }) { Text("Hapus semua") }
+                    TombolTepiNeo(onClick = { hapusSemua = true }) { Text("Hapus semua") }
                 }
             }
         }
@@ -119,7 +119,7 @@ fun MemoriScreen(
                     Text(
                         text = kategori.label(),
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 items(isi, key = { "m${it.id}" }) { memori ->
@@ -170,7 +170,7 @@ fun MemoriScreen(
 
 @Composable
 private fun KartuMemori(memori: ItemMemori, onUbah: () -> Unit, onHapus: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    KartuNeo(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,

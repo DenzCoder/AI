@@ -9,13 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +41,10 @@ import id.asisten.app.ui.komponen.TombolUbah
 import id.asisten.app.ui.wadahViewModel
 import java.time.DayOfWeek
 import java.time.LocalDate
+import id.asisten.app.ui.komponen.TombolNeo
+import id.asisten.app.ui.komponen.TombolTepiNeo
+import id.asisten.app.ui.komponen.TombolTeksNeo
+import id.asisten.app.ui.komponen.KartuNeo
 
 private class FormPelajaran(val lama: Pelajaran?, val istirahatAwal: Boolean)
 
@@ -78,7 +78,7 @@ fun SekolahScreen(modifier: Modifier = Modifier) {
         }
         items(DayOfWeek.entries, key = { "jam-${it.value}" }) { h ->
             val jam = data.jamSekolah.firstOrNull { it.hari == h }
-            Card(modifier = Modifier.fillMaxWidth()) {
+            KartuNeo(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -112,7 +112,7 @@ fun SekolahScreen(modifier: Modifier = Modifier) {
             }
         }
         items(pelajaranHari, key = { "pel-${it.id}" }) { p ->
-            Card(modifier = Modifier.fillMaxWidth()) {
+            KartuNeo(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -136,8 +136,8 @@ fun SekolahScreen(modifier: Modifier = Modifier) {
         }
         item(key = "tambah-pelajaran") {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { formPelajaran = FormPelajaran(null, false) }) { Text("Tambah pelajaran") }
-                OutlinedButton(onClick = { formPelajaran = FormPelajaran(null, true) }) { Text("Tambah istirahat") }
+                TombolNeo(onClick = { formPelajaran = FormPelajaran(null, false) }) { Text("Tambah pelajaran") }
+                TombolTepiNeo(onClick = { formPelajaran = FormPelajaran(null, true) }) { Text("Tambah istirahat") }
             }
         }
 
@@ -147,7 +147,7 @@ fun SekolahScreen(modifier: Modifier = Modifier) {
             item(key = "kosong-piket") { TeksPetunjuk("Belum ada jadwal piket.") }
         }
         items(data.piket.sortedBy { it.hari.value }, key = { "pik-${it.id}" }) { piket ->
-            Card(modifier = Modifier.fillMaxWidth()) {
+            KartuNeo(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -161,7 +161,7 @@ fun SekolahScreen(modifier: Modifier = Modifier) {
             }
         }
         item(key = "tambah-piket") {
-            Button(onClick = { dialogPiket = true }) { Text("Tambah piket") }
+            TombolNeo(onClick = { dialogPiket = true }) { Text("Tambah piket") }
         }
     }
 
@@ -241,7 +241,7 @@ private fun DialogJamSekolah(
         FieldTeks("Jam pulang", pulang, { pulang = it }, petunjuk = "Format JJ:MM, contoh 14:00")
         TeksGalat(galat)
         if (lama != null) {
-            TextButton(onClick = onHapus) { Text("Hapus jam sekolah hari ini") }
+            TombolTeksNeo(onClick = onHapus) { Text("Hapus jam sekolah hari ini") }
         }
     }
 }

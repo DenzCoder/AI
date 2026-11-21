@@ -9,11 +9,12 @@
 | 5 | Alarm and Notifications | Code written; scheduling/policy logic verified (JVM); Android layer and UI build **NOT verified**; no on-device alarm test yet |
 | 6 | Hanako AI (+ actions, see below) | Code written; chat/prompt/parsing/client logic verified (JVM, HTTP client against a loopback server); screens, Keystore and DataStore layer build **NOT verified**; never tried on a phone or against the real Gemini API |
 | 7 | Voice System | Code written; speech-text and settings logic verified (JVM); `TextToSpeech`, speech dialog and screens build **NOT verified**; never tried on a phone |
+| 6b | Extras requested 2026-11-16 | Groq + DeepSeek providers, reminder sounds, cuter voice, neo-brutalism look: code written; pure logic verified (JVM); **all Android/Compose parts NOT compiled, NOT run, never listened to or looked at**; see the checklist below |
 | 8 | Life Management | Not started |
 | 9 | Intelligence and Cloud | Not started |
 | 10 | Final QA and APK | Not started |
 
-Verified so far: 409 JVM unit tests pass (`tools/jvm-check.sh`, Kotlin 2.0.21: domain, mappers and the Gemini HTTP client) and `tools/cek-statis.py` (resources, imports, manifest, Hanako images) is clean.
+Verified so far: 492 JVM unit tests pass (`tools/jvm-check.sh`, Kotlin 2.0.21: domain, mappers and the AI HTTP client for Gemini, Groq and DeepSeek against a loopback server) and `tools/cek-statis.py` (resources, imports, R.raw, manifest, Hanako images) is clean.
 Not verified: Gradle/AGP build, KSP/Room, Compose, instrumented tests, on-device behavior. No APK exists.
 
 ## Phase 1 checklist
@@ -107,3 +108,16 @@ User request: "Hanako belum bisa akses aplikasi, seperti atur alarm, ubah jadwal
 - [ ] Phone checklist (HANDOFF.md, step 8) and a real Gemini function-calling test (never done)
 - [ ] Not included: goals (tujuan) and memory actions, holiday/supply lists, bulk reschedule, "undo" after approval, spoken confirmation
 
+## Extras checklist (user request of 2026-11-16, finished 2026-11-22)
+User: "tambahin 2 model ai lagi yaitu groq sama deepsek jadi bisa ganti; untuk alarm kasih suaranya atau bisa setel musik dari perangkat; update tampilan, masih jelek; suara masih Google, bisa lebih imut". Style later chosen by the user: neo-brutalism.
+- [x] **Groq and DeepSeek next to Gemini**, switchable in Hanako's settings; own key (encrypted) and model name per provider; OpenAI-style protocol; Hanako actions work with all three; 402 "saldo habis" error; DeepSeek data-in-China note
+- [x] Protocol, parser, error mapping and HTTP client tested (loopback server, all providers)
+- [ ] First real request to Groq / DeepSeek (never done); default models `llama-3.3-70b-versatile`, `deepseek-flash` are unverified suggestions
+- [x] **Reminder sounds**: default, 5 built-in tones, system tone, music from the phone, preview, alarm-volume switch; one notification channel per sound choice
+- [ ] Listen to the tones and hear a custom song as a reminder on the phone (never done)
+- [x] **Cuter voice**: packages Normal / Imut / Imut banget, list of the engine's voices with a Dengar button
+- [ ] Listen on the phone; the voice is still the system TTS (a real character voice would need a cloud voice service, not done)
+- [x] **Neo-brutalism look**: theme (cream, ink outlines, hard shadows, accent colour kept), cards, buttons, chips, tabs, dialogs, titles, navigation, chat bubbles, calendar cells, accent picker; contrast-aware text on the accent colour (tested)
+- [ ] Look at it on the phone and judge it (the user said they would); never compiled
+- [x] 83 new JVM tests (409 -> 492) + deliberate-bug checks; separate review of the new Compose code found no compile error
+- [ ] Build verification of all of the above (Gradle/Compose) — pending CI, no compiler was ever available

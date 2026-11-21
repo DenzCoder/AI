@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="launcher_background">#1F2A52</color>
+    <!-- Window background before Compose draws its first frame: matches the neo theme background. -->
+    <color name="latar_jendela">#FFF3D6</color>
 </resources>

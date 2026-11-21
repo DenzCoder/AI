@@ -18,13 +18,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,6 +52,9 @@ import id.asisten.app.ui.komponen.TeksPetunjuk
 import id.asisten.app.ui.wadahViewModel
 import java.time.ZoneId
 import kotlinx.coroutines.delay
+import id.asisten.app.ui.komponen.TombolNeo
+import id.asisten.app.ui.komponen.TombolTepiNeo
+import id.asisten.app.ui.komponen.KartuNeo
 
 /**
  * Reminder and mode settings. Everything here is real: the permission status is read from the system,
@@ -115,9 +114,9 @@ fun PengingatScreen(
             JudulHalaman("Pengingat dan mode")
         }
 
-        Card(
+        KartuNeo(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            warna = MaterialTheme.colorScheme.primary,
         ) {
             Row(
                 modifier = Modifier.padding(16.dp),
@@ -128,7 +127,6 @@ fun PengingatScreen(
                 Text(
                     text = LabelPengingat.sapaanHanako(p, sekarang, notifikasiOk),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -140,11 +138,11 @@ fun PengingatScreen(
             } else {
                 TeksPetunjuk("Notifikasi dimatikan untuk ASISTEN. Pengingat tidak akan terlihat sampai kamu mengizinkannya.")
                 if (CekIzin.perluMintaIzinNotifikasi()) {
-                    Button(onClick = { peluncurIzin.launch(Manifest.permission.POST_NOTIFICATIONS) }) {
+                    TombolNeo(onClick = { peluncurIzin.launch(Manifest.permission.POST_NOTIFICATIONS) }) {
                         Text("Izinkan notifikasi")
                     }
                 }
-                OutlinedButton(
+                TombolTepiNeo(
                     onClick = {
                         val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
@@ -158,7 +156,7 @@ fun PengingatScreen(
                 TeksPetunjuk(
                     "Alarm presisi belum diizinkan. Pengingat tetap berjalan, tetapi bisa terlambat beberapa menit.",
                 )
-                Button(
+                TombolNeo(
                     onClick = {
                         val intent = Intent(
                             Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
@@ -172,7 +170,7 @@ fun PengingatScreen(
                 "Jika pengingat sering terlambat atau tidak muncul, izinkan ASISTEN berjalan di latar belakang " +
                     "dan matikan penghematan baterainya (di realme: Pengaturan > Baterai).",
             )
-            OutlinedButton(
+            TombolTepiNeo(
                 onClick = {
                     val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                     pesan = if (bukaHalaman(context, intent)) null else PESAN_GAGAL_BUKA
@@ -257,7 +255,7 @@ fun PengingatScreen(
             TeksPetunjuk("Fokus: hanya pengingat berprioritas Tinggi yang berbunyi, yang lain muncul tanpa suara.")
             BarisTombol {
                 PilihanPengingat.DURASI_FOKUS.forEach { menit ->
-                    OutlinedButton(onClick = { vm.mulaiMode(ModePengingat.FOKUS, menit) }) {
+                    TombolTepiNeo(onClick = { vm.mulaiMode(ModePengingat.FOKUS, menit) }) {
                         Text("Fokus ${LabelPengingat.durasi(menit)}")
                     }
                 }
@@ -265,13 +263,13 @@ fun PengingatScreen(
             TeksPetunjuk("Istirahat: semua pengingat muncul tanpa suara.")
             BarisTombol {
                 PilihanPengingat.DURASI_ISTIRAHAT.forEach { menit ->
-                    OutlinedButton(onClick = { vm.mulaiMode(ModePengingat.ISTIRAHAT, menit) }) {
+                    TombolTepiNeo(onClick = { vm.mulaiMode(ModePengingat.ISTIRAHAT, menit) }) {
                         Text("Istirahat ${LabelPengingat.durasi(menit)}")
                     }
                 }
             }
             if (modeAktif != ModePengingat.NORMAL) {
-                Button(onClick = { vm.akhiriMode() }) { Text("Akhiri mode sekarang") }
+                TombolNeo(onClick = { vm.akhiriMode() }) { Text("Akhiri mode sekarang") }
             }
         }
 
@@ -290,7 +288,7 @@ fun PengingatScreen(
                         Text(
                             text = PenyusunNotifikasi.labelWaktu(item.pengingat.waktu, zona),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.tertiary,
                         )
                         Text(text = item.judul, style = MaterialTheme.typography.bodyLarge)
                         Text(
@@ -307,7 +305,7 @@ fun PengingatScreen(
 
         BagianPengingat("Uji notifikasi") {
             TeksPetunjuk("Kirim satu notifikasi sekarang untuk memeriksa izin, suara, dan mode yang sedang aktif.")
-            OutlinedButton(onClick = { vm.kirimUji(CekIzin.notifikasiDiizinkan(context)) }) {
+            TombolTepiNeo(onClick = { vm.kirimUji(CekIzin.notifikasiDiizinkan(context)) }) {
                 Text("Kirim notifikasi uji")
             }
             hasilUji?.let { TeksPetunjuk(it) }
@@ -353,9 +351,9 @@ private fun PemilihJam(label: String, menit: Int, onUbah: (Int) -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            OutlinedButton(onClick = { onUbah(GeserMenit.mundur(menit)) }) { Text("-30 mnt") }
+            TombolTepiNeo(onClick = { onUbah(GeserMenit.mundur(menit)) }) { Text("-30 mnt") }
             Text(text = GeserMenit.format(menit), style = MaterialTheme.typography.titleMedium)
-            OutlinedButton(onClick = { onUbah(GeserMenit.maju(menit)) }) { Text("+30 mnt") }
+            TombolTepiNeo(onClick = { onUbah(GeserMenit.maju(menit)) }) { Text("+30 mnt") }
         }
     }
 }

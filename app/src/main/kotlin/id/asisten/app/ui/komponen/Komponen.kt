@@ -1,38 +1,56 @@
 package id.asisten.app.ui.komponen
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import id.asisten.app.ui.theme.LocalNeo
+import id.asisten.app.ui.theme.tintaKontras
 
+/** The page title as a yellow sticker: ink outline, hard shadow, heavy type. */
 @Composable
 fun JudulHalaman(teks: String, modifier: Modifier = Modifier) {
-    Text(
-        text = teks,
-        style = MaterialTheme.typography.headlineMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = modifier,
-    )
+    val neo = LocalNeo.current
+    val warna = MaterialTheme.colorScheme.secondary
+    val bentuk = RoundedCornerShape(8.dp)
+    Box(modifier = modifier.padding(end = 4.dp, bottom = 4.dp)) {
+        Text(
+            text = teks,
+            style = MaterialTheme.typography.headlineSmall,
+            color = warna.tintaKontras(),
+            modifier = Modifier
+                .bayanganNeo(8.dp, neo.bayangan, 4.dp)
+                .background(warna, bentuk)
+                .border(3.dp, neo.garis, bentuk)
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+        )
+    }
 }
 
 @Composable
@@ -74,16 +92,29 @@ fun <T> BarisPilihan(
 ) {
     Row(
         modifier = modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         opsi.forEach { pilihan ->
-            FilterChip(
-                selected = pilihan == terpilih,
-                onClick = { onPilih(pilihan) },
-                label = { Text(label(pilihan)) },
-            )
+            ChipNeo(terpilih = pilihan == terpilih, onClick = { onPilih(pilihan) }) {
+                Text(label(pilihan))
+            }
         }
     }
+}
+
+/** Text field colours for the neo look: white box, ink outline (also while focused). */
+@Composable
+fun warnaFieldNeo(): TextFieldColors {
+    val skema = MaterialTheme.colorScheme
+    return OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = skema.surface,
+        unfocusedContainerColor = skema.surface,
+        focusedBorderColor = skema.onSurface,
+        unfocusedBorderColor = skema.onSurface,
+        focusedLabelColor = skema.onSurface,
+        unfocusedLabelColor = skema.onSurfaceVariant,
+        cursorColor = skema.onSurface,
+    )
 }
 
 @Composable
@@ -103,8 +134,46 @@ fun FieldTeks(
         singleLine = singleLine,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         supportingText = if (petunjuk != null) ({ Text(petunjuk) }) else null,
+        colors = warnaFieldNeo(),
         modifier = modifier.fillMaxWidth(),
     )
+}
+
+/**
+ * The shared dialog frame: a neo card with the title, the scrolling content and a row of buttons.
+ * The content scrolls so long forms still fit on small screens (the buttons stay in view).
+ */
+@Composable
+private fun KerangkaDialog(
+    judul: String,
+    onTutup: () -> Unit,
+    tombol: @Composable () -> Unit,
+    isi: @Composable ColumnScope.() -> Unit,
+) {
+    Dialog(onDismissRequest = onTutup) {
+        KartuNeo(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(judul, style = MaterialTheme.typography.titleLarge)
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    isi()
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                ) {
+                    tombol()
+                }
+            }
+        }
+    }
 }
 
 /** Form dialog. The content scrolls so long forms still fit on small screens. */
@@ -117,24 +186,18 @@ fun DialogForm(
     labelSimpan: String = "Simpan",
     isi: @Composable ColumnScope.() -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onBatal,
-        modifier = modifier,
-        title = { Text(judul) },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                isi()
-            }
+    KerangkaDialog(
+        judul = judul,
+        onTutup = onBatal,
+        tombol = {
+            TombolTepiNeo(onClick = onBatal) { Text("Batal") }
+            TombolNeo(onClick = onSimpan) { Text(labelSimpan) }
         },
-        confirmButton = { TextButton(onClick = onSimpan) { Text(labelSimpan) } },
-        dismissButton = { TextButton(onClick = onBatal) { Text("Batal") } },
+        isi = isi,
     )
 }
 
-/** Explicit confirmation before deleting a record. */
+/** Explicit confirmation before deleting a record. The confirm button is red because the default action is a delete. */
 @Composable
 fun DialogKonfirmasi(
     judul: String,
@@ -143,12 +206,14 @@ fun DialogKonfirmasi(
     onBatal: () -> Unit,
     labelYa: String = "Hapus",
 ) {
-    AlertDialog(
-        onDismissRequest = onBatal,
-        title = { Text(judul) },
-        text = { Text(pesan) },
-        confirmButton = { TextButton(onClick = onYa) { Text(labelYa) } },
-        dismissButton = { TextButton(onClick = onBatal) { Text("Batal") } },
+    KerangkaDialog(
+        judul = judul,
+        onTutup = onBatal,
+        tombol = {
+            TombolTepiNeo(onClick = onBatal) { Text("Batal") }
+            TombolNeo(onClick = onYa, warna = MaterialTheme.colorScheme.error) { Text(labelYa) }
+        },
+        isi = { Text(pesan) },
     )
 }
 

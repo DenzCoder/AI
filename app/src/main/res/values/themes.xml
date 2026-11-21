@@ -4,5 +4,6 @@
     <style name="Theme.Asisten" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@color/latar_jendela</item>
     </style>
 </resources>

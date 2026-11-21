@@ -9,16 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +49,12 @@ import id.asisten.app.ui.komponen.TombolHapus
 import id.asisten.app.ui.komponen.TombolUbah
 import id.asisten.app.ui.wadahViewModel
 import java.time.LocalDate
+import id.asisten.app.ui.komponen.TabNeo
+import id.asisten.app.ui.komponen.TombolNeo
+import id.asisten.app.ui.komponen.TombolTepiNeo
+import id.asisten.app.ui.komponen.TombolTeksNeo
+import id.asisten.app.ui.komponen.KartuNeo
+import id.asisten.app.ui.komponen.BilahProgresNeo
 
 private val NAMA_TAB = listOf("Tugas", "Tujuan", "Riwayat")
 
@@ -68,11 +67,7 @@ fun AktivitasScreen(modifier: Modifier = Modifier) {
     var tab by rememberSaveable { mutableStateOf(0) }
 
     Column(modifier = modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = tab) {
-            NAMA_TAB.forEachIndexed { indeks, nama ->
-                Tab(selected = tab == indeks, onClick = { tab = indeks }, text = { Text(nama) })
-            }
-        }
+        TabNeo(daftar = NAMA_TAB, terpilih = tab, onPilih = { tab = it })
         when (tab) {
             0 -> TabTugas(tugas, vm)
             1 -> TabTujuan(tujuan, vm)
@@ -107,13 +102,13 @@ private fun TabTugas(daftar: List<Tugas>, vm: AktivitasViewModel) {
             )
         }
         item(key = "tambah") {
-            Button(onClick = { form = FormTugas(null) }) { Text("Tambah tugas, PR, atau ujian") }
+            TombolNeo(onClick = { form = FormTugas(null) }) { Text("Tambah tugas, PR, atau ujian") }
         }
         if (tampil.isEmpty()) {
             item(key = "kosong") { TeksPetunjuk("Tidak ada yang menunggu. Item yang sudah selesai ada di tab Riwayat.") }
         }
         items(tampil, key = { "t${it.id}" }) { t ->
-            Card(modifier = Modifier.fillMaxWidth()) {
+            KartuNeo(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -236,13 +231,13 @@ private fun TabTujuan(daftar: List<Tujuan>, vm: AktivitasViewModel) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item(key = "tambah") {
-            Button(onClick = { form = FormTujuan(null) }) { Text("Tambah tujuan") }
+            TombolNeo(onClick = { form = FormTujuan(null) }) { Text("Tambah tujuan") }
         }
         if (aktif.isEmpty()) {
             item(key = "kosong") { TeksPetunjuk("Belum ada tujuan aktif. Tujuan yang sudah tercapai ada di tab Riwayat.") }
         }
         items(aktif, key = { "g${it.id}" }) { tujuan ->
-            Card(modifier = Modifier.fillMaxWidth()) {
+            KartuNeo(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
@@ -261,10 +256,7 @@ private fun TabTujuan(daftar: List<Tujuan>, vm: AktivitasViewModel) {
                         TombolHapus({ hapus = tujuan }, deskripsi = "Hapus " + tujuan.judul)
                     }
                     if (tujuan.tonggak.isNotEmpty()) {
-                        LinearProgressIndicator(
-                            progress = { tujuan.kemajuan },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                        BilahProgresNeo(progres = tujuan.kemajuan, modifier = Modifier.fillMaxWidth())
                         Text(
                             text = FormatAktivitas.persen(tujuan.kemajuan).toString() + "% (" +
                                 tujuan.tonggak.count { it.selesai } + " dari " + tujuan.tonggak.size + " tonggak)",
@@ -289,8 +281,8 @@ private fun TabTujuan(daftar: List<Tujuan>, vm: AktivitasViewModel) {
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { tambahTonggak = tujuan }) { Text("Tambah tonggak") }
-                        Button(onClick = { vm.setTujuanSelesai(tujuan, true) }) { Text("Tandai tercapai") }
+                        TombolTepiNeo(onClick = { tambahTonggak = tujuan }) { Text("Tambah tonggak") }
+                        TombolNeo(onClick = { vm.setTujuanSelesai(tujuan, true) }) { Text("Tandai tercapai") }
                     }
                 }
             }
@@ -411,7 +403,7 @@ private fun TabRiwayat(tugas: List<Tugas>, tujuan: List<Tujuan>, vm: AktivitasVi
             item(key = "kosong-tugas") { TeksPetunjuk("Belum ada tugas yang diselesaikan.") }
         }
         items(tugasSelesai, key = { "rt${it.id}" }) { t ->
-            Card(modifier = Modifier.fillMaxWidth()) {
+            KartuNeo(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -424,7 +416,7 @@ private fun TabRiwayat(tugas: List<Tugas>, tujuan: List<Tujuan>, vm: AktivitasVi
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    TextButton(onClick = { vm.setTugasSelesai(t, false) }) { Text("Batalkan") }
+                    TombolTeksNeo(onClick = { vm.setTugasSelesai(t, false) }) { Text("Batalkan") }
                 }
             }
         }
@@ -433,7 +425,7 @@ private fun TabRiwayat(tugas: List<Tugas>, tujuan: List<Tujuan>, vm: AktivitasVi
             item(key = "kosong-tujuan") { TeksPetunjuk("Belum ada tujuan yang tercapai.") }
         }
         items(tujuanTercapai, key = { "rg${it.id}" }) { g ->
-            Card(modifier = Modifier.fillMaxWidth()) {
+            KartuNeo(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -446,7 +438,7 @@ private fun TabRiwayat(tugas: List<Tugas>, tujuan: List<Tujuan>, vm: AktivitasVi
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    TextButton(onClick = { vm.setTujuanSelesai(g, false) }) { Text("Batalkan") }
+                    TombolTeksNeo(onClick = { vm.setTujuanSelesai(g, false) }) { Text("Batalkan") }
                 }
             }
         }

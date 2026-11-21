@@ -6,15 +6,20 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -30,6 +35,7 @@ import id.asisten.app.ui.hanako.HanakoScreen
 import id.asisten.app.ui.jadwal.JadwalScreen
 import id.asisten.app.ui.pengaturan.PengaturanViewModel
 import id.asisten.app.ui.profil.ProfilScreen
+import id.asisten.app.ui.theme.LocalNeo
 
 /**
  * [tujuanBuka] is the route of a tab requested from outside (a notification). The app navigates there once and
@@ -67,7 +73,31 @@ fun AsistenApp(
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            val skema = MaterialTheme.colorScheme
+            val garisNeo = LocalNeo.current.garis
+            NavigationBar(
+                // A thick ink line along the top edge, drawn over the bar's own background.
+                modifier = Modifier.drawWithContent {
+                    drawContent()
+                    val tebal = 3.dp.toPx()
+                    drawLine(
+                        color = garisNeo,
+                        start = Offset(0f, tebal / 2),
+                        end = Offset(size.width, tebal / 2),
+                        strokeWidth = tebal,
+                    )
+                },
+                containerColor = skema.surface,
+                contentColor = skema.onSurface,
+                tonalElevation = 0.dp,
+            ) {
+                val warnaItem = NavigationBarItemDefaults.colors(
+                    selectedIconColor = skema.onPrimary,
+                    selectedTextColor = skema.onSurface,
+                    indicatorColor = skema.primary,
+                    unselectedIconColor = skema.onSurfaceVariant,
+                    unselectedTextColor = skema.onSurfaceVariant,
+                )
                 AsistenDestination.entries.forEach { tujuan ->
                     val label = stringResource(tujuan.label)
                     NavigationBarItem(
@@ -83,6 +113,7 @@ fun AsistenApp(
                         },
                         icon = { Icon(tujuan.icon, contentDescription = label) },
                         label = { Text(label) },
+                        colors = warnaItem,
                     )
                 }
             }

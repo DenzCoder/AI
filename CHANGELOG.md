@@ -1,5 +1,57 @@
 # CHANGELOG
 
+## [Unreleased] — Neo-brutalism look (2026-11-22)
+User request: "tampilan ... masih jelek, upgrade lebih bagus"; then "kayaknya Neo brutalism bagus jadi kamu atur sendiri nanti biar aku yang nilai" (the style was chosen by the user, the details by the session; the user will judge the result on the phone).
+### Changed
+- New theme (`ui/theme/Theme.kt`, `GayaNeo.kt`): cream background, white cards, near-black ink outlines, yellow secondary, dark pink tertiary, red error; small corner radii (4–12 dp) and heavier type (Black / ExtraBold for headings, titles and button labels). The accent colour the user picks in Profil (jingga / ungu / hijau / biru) is still the primary colour.
+- Dark mode keeps the look: cream outlines, and the hard shadow takes the accent colour (a black shadow would vanish on a dark background).
+- Text on the accent colour is chosen by WCAG contrast (`domain/pengaturan/KontrasWarna.kt`, pure and tested) instead of a fixed white: near-black on jingga, hijau and biru, white on ungu.
+- New components (`ui/komponen/Neo.kt`): `KartuNeo` (card), `TombolNeo` / `TombolTepiNeo` (primary / secondary button that slides onto its hard shadow while pressed, flat grey when disabled), `TombolTeksNeo` (underlined text action), `ChipNeo` (single-choice or action chip), `TabNeo` (equal-width tabs), `BilahProgresNeo` (thick progress bar with progress semantics), `bayanganNeo` (the hard shadow modifier). Every block reserves room for its own shadow, so nothing is clipped by a scrolling parent.
+- Every `Card`, `Button`, `OutlinedButton`, `TextButton`, `FilterChip`, `SuggestionChip`, `TabRow` and `LinearProgressIndicator` in the screens was replaced by these; dialogs (`DialogForm`, `DialogKonfirmasi`) are now a neo card in a `Dialog` (the delete confirmation button is red); page titles are yellow stickers (`JudulHalaman`); text fields get white boxes with ink outlines; the bottom navigation has a thick top line and an accent-coloured selected item; chat bubbles, proposal cards and error cards use the neo card; the calendar day cells are squares (chosen day = accent, today = yellow); the accent picker shows square swatches with a check on the chosen one.
+- Text that used the accent colour on the cream background (hard to read for orange) now uses ink or the dark pink tertiary colour.
+- The window background before the first Compose frame is cream (light) or dark violet (night) instead of white.
+### Verified
+- `tools/jvm-check.sh` **OK (492 tests)**; `tools/cek-statis.py` clean (140 Kotlin, 13 XML files). 6 new tests for the contrast logic; deliberate-bug checks in scratch copies (inverted dark/white decision, wrong sRGB exponent, swapped colour weights, wrong linearisation threshold, no contrast offset) are all detected; the first round missed the exponent bug, so a test with fixed WCAG reference values was added and the bug is now caught.
+- A separate review agent read the new Compose code and every call site as a "human compiler" and found no compile error; its only doubts (about 90–95 % sure): `Typography().copy(...)` and `Shapes(...)` with the five classic names under Material3 1.4.
+### Not done / not verified
+- **None of the UI was compiled or seen on a screen.** How it actually looks (spacing, shadow clipping, contrast on the real display, chip row widths on a small phone, the dialog on a small screen with the keyboard) is unknown until the user looks at it. Only the user can judge whether it is "bagus".
+- Switch, Checkbox, RadioButton and the circular progress indicator keep the Material look (recoloured by the theme only).
+
+## [Unreleased] — Hanako's voice: cuter presets and the engine's voices (2026-11-21)
+User request: "suara nya masih Google, ga bisa kah suara model yang dipilih lebih imut lagi".
+### Added
+- Voice packages in Hanako's settings: **Normal** (speed 1.0, pitch 1.0), **Imut** (1.1 / 1.4) and **Imut banget** (1.15 / 1.7); the pitch chips also got Imut and Imut banget. The package matching the current values is highlighted; hand-tuned values show no package.
+- A list of the voices the installed text-to-speech engine offers (Indonesian first), each with a **Dengar** button and a "Bawaan mesin" entry; the choice is stored and used by `PembacaSuara`.
+- `DaftarVoice` / `InfoVoice` (pure, tested) sort and label the engine's voices.
+### Honest limits
+- It is still the phone's TTS engine (usually Google's). Pitch and speed only make it sound higher and quicker; the app does not say which voice is male or female because Android does not expose that. A truly cute or character voice needs a cloud voice service (an extra key, cost, privacy decision): **not implemented**, offered as a later option.
+- `PembacaSuara` voice selection and the settings UI are Android-only code: not compiled, never listened to.
+
+## [Unreleased] — Reminder sounds: app tones, system tones, your own music (2026-11-20)
+User request: "untuk alarm kasih suaranya atau bisa setel musik dari perangkat juga".
+### Added
+- "Suara pengingat" section on the Pengingat screen: **Bawaan** (phone's default notification sound, as before), five **built-in tones** (Lonceng, Kicau, Kotak musik, Bel sekolah, Alarm digital; generated by `tools/buat-nada.py`, ~15 % RMS, no clipping, stored as `res/raw/nada_*.ogg`), a **system tone** from the ringtone picker, and **music from the phone** (file picker).
+- Each choice has a play/stop preview. A switch "Pakai volume alarm" plays the reminder with the alarm audio usage (follows the alarm volume instead of the notification volume).
+- Android fixes a notification channel's sound when the channel is created, so the app keeps **one channel per sound choice** (id from an FNV-1a hash of the choice, covered by test vectors) and deletes stale ones; silent / quiet-hours reminders use a separate silent channel.
+- Picked music is copied into the media store (`Notifications/ASISTEN`, marked IS_NOTIFICATION, IS_PENDING while copying; no storage permission needed on API 30+) so the notification system can play it; replacing or removing it deletes the copy. System tones are only referenced, never deleted.
+- `SuaraPengingat` model + codec (unreadable stored text falls back to the default sound, never to silence), `SuaraPengingatRepository`, `PengelolaSuara`, `PemutarContoh`, `PenampilNotifikasi.siapkanSaluran`, `BagianSuara` UI. The test notification uses the chosen sound.
+### Not verified
+- Never compiled, never run on a phone, **never listened to**: whether the tones sound pleasant, whether ColorOS plays a custom notification sound from the media store, and whether alarm volume behaves as expected are all unknown. `tools/cek-statis.py` now also checks `R.raw` references.
+
+## [Unreleased] — Two more AI services: Groq and DeepSeek (2026-11-16)
+User request: "tambahin 2 model ai lagi yaitu groq sama deepsek jadi bisa ganti".
+### Added
+- Hanako can now talk to **Gemini, Groq or DeepSeek**; the settings screen has a provider chooser. Each provider has its **own encrypted key and its own model name** (switching never reuses one provider's key for another); the consent box is ticked each time a key is saved, with a provider-specific note.
+- Protocols: Gemini `generateContent` (key in the `x-goog-api-key` header); Groq `https://api.groq.com/openai/v1/chat/completions` and DeepSeek `https://api.deepseek.com/chat/completions` (OpenAI-style chat completions, Bearer key, `tools` as `{type:"function"}`, tool-call arguments parsed from a JSON string). Groq sends `max_completion_tokens`; DeepSeek sends `max_tokens` and `thinking: {type: "disabled"}`. Requests only go to each provider's fixed HTTPS address.
+- Hanako actions (the 13 proposal functions) work with all three providers (`DeklarasiAksi.alatOpenAi`).
+- New error kind for **402 (insufficient balance)**; provider-aware error and status wording (`LabelHanako`).
+- DeepSeek shows a note next to the consent switch: its privacy policy says data is processed and stored on servers in China.
+- Default model suggestions: Groq `llama-3.3-70b-versatile`; DeepSeek `deepseek-flash` (also `deepseek-v4-pro`). Names are editable with one-tap suggestions.
+### Changed
+- `KlienGemini` became `KlienAi`; `ProtokolGemini` is Gemini-only and `ProtokolAi.kt` holds the shared parts (`PermintaanAi`, `UraiResponsAi`) and the OpenAI-style ones (`PermintaanOpenAi`, `UraiResponsOpenAi`); the stored settings gained a provider field (old installs default to Gemini).
+### Verified / not verified
+- 77 new JVM tests in total for the three features of this batch (409 -> 486), including a loopback HTTP server test for all three providers. **No request has ever been sent to the real Groq, DeepSeek or Gemini service**: the exact request fields, the default model names (taken from documentation at the time of writing; DeepSeek's in particular may be retired or renamed) and whether each model follows the function schema are unknown until tried with real keys.
+
 ## [Unreleased] — Hanako actions: she can propose changes to the app (2026-11-16)
 ### Added
 - Hanako can now propose (never silently do) changes: add / change / delete tasks, activities and timetable lessons, mark a task done or not done, change reminder settings (minutes before, snooze, quiet hours, on/off), start or end Fokus / Istirahat mode. Uses Gemini function calling (13 declared functions).

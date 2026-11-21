@@ -1,6 +1,7 @@
 package id.asisten.app.ui.jadwal
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,16 +18,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +63,11 @@ import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDate
 import java.time.YearMonth
+import id.asisten.app.ui.komponen.TombolNeo
+import id.asisten.app.ui.komponen.TombolTeksNeo
+import id.asisten.app.ui.komponen.KartuNeo
+import id.asisten.app.ui.theme.LocalNeo
+import id.asisten.app.ui.theme.tintaKontras
 
 private class FormKegiatan(val lama: Kegiatan?)
 
@@ -99,7 +103,7 @@ fun KalenderTab(modifier: Modifier = Modifier) {
             )
         }
         item(key = "tambah") {
-            Button(onClick = { form = FormKegiatan(null) }) { Text("Tambah kegiatan") }
+            TombolNeo(onClick = { form = FormKegiatan(null) }) { Text("Tambah kegiatan") }
         }
         when (mode) {
             ModeKalender.HARI -> tampilanHari(
@@ -176,7 +180,7 @@ private fun BarisNavigasi(
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Berikutnya")
             }
         }
-        TextButton(onClick = onHariIni) { Text("Ke hari ini") }
+        TombolTeksNeo(onClick = onHariIni) { Text("Ke hari ini") }
     }
 }
 
@@ -193,7 +197,7 @@ private fun LazyListScope.tampilanHari(
     val daftarBlok = PenyusunHarian.susun(tanggal, data.kegiatan, data.pelajaran)
 
     item(key = "info-sekolah") {
-        Card(modifier = Modifier.fillMaxWidth()) {
+        KartuNeo(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = if (jam != null) "Sekolah " + Waktu.rentang(jam.masuk, jam.pulang)
@@ -208,7 +212,7 @@ private fun LazyListScope.tampilanHari(
     }
     if (tenggat.isNotEmpty()) {
         item(key = "tenggat") {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            KartuNeo(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(text = "Tenggat hari ini", style = MaterialTheme.typography.titleSmall)
                     tenggat.forEach {
@@ -240,7 +244,7 @@ private fun KartuBlok(blok: ItemHarian, onClick: (() -> Unit)?) {
     } else {
         Modifier.fillMaxWidth()
     }
-    Card(modifier = modifier) {
+    KartuNeo(modifier = modifier) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = Waktu.rentang(blok.mulai, blok.selesai) + "  ·  " + blok.sumber.label(),
@@ -287,13 +291,13 @@ private fun LazyListScope.tampilanMinggu(
     items(Kalender.hariDalamMinggu(tanggal), key = { "hari-${it.toEpochDay()}" }) { hari ->
         val daftarBlok = PenyusunHarian.susun(hari, data.kegiatan, data.pelajaran)
         val jumlahTenggat = data.tugas.count { !it.selesai && it.tenggat == hari }
-        Card(modifier = Modifier.fillMaxWidth().clickable { onBuka(hari) }) {
+        KartuNeo(modifier = Modifier.fillMaxWidth(), onClick = { onBuka(hari) }) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = NamaHari.untuk(hari.dayOfWeek) + ", " + hari.dayOfMonth,
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (hari == hariIni) FontWeight.Bold else FontWeight.Normal,
-                    color = if (hari == hariIni) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (hari == hariIni) FontWeight.Black else FontWeight.Bold,
+                    color = if (hari == hariIni) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
                 )
                 if (daftarBlok.isEmpty() && jumlahTenggat == 0) {
                     TeksPetunjuk("Kosong")
@@ -368,14 +372,31 @@ private fun RowScope.SelHari(
     ada: Boolean,
     onClick: () -> Unit,
 ) {
-    val latar = if (terpilih) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+    val neo = LocalNeo.current
+    val skema = MaterialTheme.colorScheme
+    val bentuk = RoundedCornerShape(8.dp)
+    // The chosen day is filled with the accent colour, today is highlighted yellow, other days stay plain.
+    val latar = when {
+        terpilih -> skema.primary
+        hariIni -> skema.secondaryContainer
+        else -> skema.surface
+    }
+    val tinta = latar.tintaKontras()
     Box(
         modifier = Modifier
             .weight(1f)
             .aspectRatio(1f)
             .padding(2.dp)
-            .clip(CircleShape)
-            .background(latar)
+            .then(
+                if (hari != null) {
+                    Modifier
+                        .background(latar, bentuk)
+                        .border(if (terpilih || hariIni) neo.tebal else 1.dp, if (terpilih || hariIni) neo.garis else neo.garis.copy(alpha = 0.3f), bentuk)
+                } else {
+                    Modifier
+                },
+            )
+            .clip(bentuk)
             .clickable(enabled = hari != null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -384,15 +405,15 @@ private fun RowScope.SelHari(
                 Text(
                     text = hari.dayOfMonth.toString(),
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (hariIni) FontWeight.Bold else FontWeight.Normal,
-                    color = if (hariIni) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (hariIni || terpilih) FontWeight.Black else FontWeight.Bold,
+                    color = tinta,
                 )
                 if (ada) {
                     Box(
                         modifier = Modifier
                             .size(5.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
+                            .background(if (terpilih) tinta else skema.tertiary),
                     )
                 }
             }
@@ -522,7 +543,7 @@ private fun FormKegiatanDialog(
                     text = "Slot kosong terdekat: " + Waktu.rentang(mulaiSaran, selesaiSaran),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                TextButton(
+                TombolTeksNeo(
                     onClick = {
                         draf = draf.copy(
                             mulaiTeks = Waktu.formatJam(mulaiSaran),
@@ -536,7 +557,7 @@ private fun FormKegiatanDialog(
         }
         TeksGalat(galat)
         if (lama != null) {
-            TextButton(onClick = { onHapus(lama) }) { Text("Hapus kegiatan") }
+            TombolTeksNeo(onClick = { onHapus(lama) }) { Text("Hapus kegiatan") }
         }
     }
 }

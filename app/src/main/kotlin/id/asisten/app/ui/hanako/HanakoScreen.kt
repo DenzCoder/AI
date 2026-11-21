@@ -22,25 +22,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -69,6 +60,12 @@ import id.asisten.app.domain.suara.PenyisipDiktean
 import id.asisten.app.domain.suara.StatusSuara
 import id.asisten.app.ui.wadahViewModel
 import java.time.LocalTime
+import id.asisten.app.ui.komponen.TombolNeo
+import id.asisten.app.ui.komponen.TombolTepiNeo
+import id.asisten.app.ui.komponen.TombolTeksNeo
+import id.asisten.app.ui.komponen.ChipNeo
+import id.asisten.app.ui.komponen.KartuNeo
+import id.asisten.app.ui.komponen.warnaFieldNeo
 
 /**
  * The "AI Hanako" tab: a chat with Hanako, plus her settings (AI service, key, model, what she may see).
@@ -160,7 +157,7 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
                 Text(
                     text = stringResource(R.string.hanako_nama),
                     style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = LabelHanako.status(online, penyedia),
@@ -227,7 +224,7 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = { pesanSuara = null }) { Text(stringResource(R.string.hanako_tutup)) }
+                TombolTeksNeo(onClick = { pesanSuara = null }) { Text(stringResource(R.string.hanako_tutup)) }
             }
         }
 
@@ -241,12 +238,13 @@ private fun ObrolanHanako(vm: HanakoViewModel, onBukaPengaturan: () -> Unit, mod
                 onValueChange = { teks = it.take(2000) },
                 placeholder = { Text(stringResource(R.string.hanako_input_petunjuk)) },
                 maxLines = 4,
+                colors = warnaFieldNeo(),
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = mulaiDiktean, enabled = !sedangMenjawab) {
                 Icon(painterResource(R.drawable.ic_mikrofon), contentDescription = stringResource(R.string.hanako_mikrofon))
             }
-            IconButton(
+            TombolNeo(
                 onClick = {
                     vm.kirim(teks)
                     teks = ""
@@ -283,7 +281,7 @@ private fun SapaanKosong(onSaran: (String) -> Unit) {
         )
         Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             saran.forEach { s ->
-                SuggestionChip(onClick = { onSaran(s) }, label = { Text(s) })
+                ChipNeo(terpilih = null, onClick = { onSaran(s) }) { Text(s) }
             }
         }
     }
@@ -301,9 +299,8 @@ private fun BalonPesan(pesan: PesanChat, onDengarkan: () -> Unit) {
             HanakoAvatar(ekspresi = pesan.ekspresi ?: EkspresiHanako.NORMAL, lebar = 40.dp)
             Box(modifier = Modifier.size(8.dp))
         }
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = when {
+        KartuNeo(
+            warna = when {
                 dariPengguna -> MaterialTheme.colorScheme.primaryContainer
                 pesan.aksi -> MaterialTheme.colorScheme.surfaceVariant
                 else -> MaterialTheme.colorScheme.secondaryContainer
@@ -353,7 +350,7 @@ private fun KartuUsulan(usulan: UsulanTampil, sibuk: Boolean, onSetujui: () -> U
     val hapus = usulan.aksi.destruktif
     val wadah = if (hapus) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer
     val isi = if (hapus) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = wadah, contentColor = isi)) {
+    KartuNeo(modifier = Modifier.fillMaxWidth(), warna = wadah, tinta = isi) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 text = stringResource(R.string.hanako_usulan_judul),
@@ -367,21 +364,14 @@ private fun KartuUsulan(usulan: UsulanTampil, sibuk: Boolean, onSetujui: () -> U
                 Text(text = w, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = isi)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Button(
+                TombolNeo(
                     onClick = onSetujui,
                     enabled = !sibuk,
-                    colors = if (hapus) {
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
-                        )
-                    } else {
-                        ButtonDefaults.buttonColors()
-                    },
+                    warna = if (hapus) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                 ) {
                     Text(stringResource(if (hapus) R.string.hanako_usulan_hapus_setujui else R.string.hanako_setujui))
                 }
-                OutlinedButton(onClick = onTolak, enabled = !sibuk) { Text(stringResource(R.string.hanako_tolak)) }
+                TombolTepiNeo(onClick = onTolak, enabled = !sibuk) { Text(stringResource(R.string.hanako_tolak)) }
             }
         }
     }
@@ -391,7 +381,7 @@ private fun KartuUsulan(usulan: UsulanTampil, sibuk: Boolean, onSetujui: () -> U
 private fun BalonMenunggu() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         HanakoAvatar(ekspresi = EkspresiHanako.BERPIKIR, lebar = 40.dp)
-        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
+        KartuNeo(warna = MaterialTheme.colorScheme.secondaryContainer) {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -413,9 +403,9 @@ private fun KartuGalat(
     onPengaturan: () -> Unit,
     onTutup: () -> Unit,
 ) {
-    Card(
+    KartuNeo(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        warna = MaterialTheme.colorScheme.errorContainer,
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
@@ -432,12 +422,12 @@ private fun KartuGalat(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (LabelHanako.bisaDiulang(jenis)) {
-                    Button(onClick = onCobaLagi) { Text(stringResource(R.string.hanako_coba_lagi)) }
+                    TombolNeo(onClick = onCobaLagi) { Text(stringResource(R.string.hanako_coba_lagi)) }
                 }
                 if (LabelHanako.perluPengaturan(jenis)) {
-                    OutlinedButton(onClick = onPengaturan) { Text(stringResource(R.string.hanako_buka_pengaturan)) }
+                    TombolTepiNeo(onClick = onPengaturan) { Text(stringResource(R.string.hanako_buka_pengaturan)) }
                 }
-                TextButton(onClick = onTutup) { Text(stringResource(R.string.hanako_tutup)) }
+                TombolTeksNeo(onClick = onTutup) { Text(stringResource(R.string.hanako_tutup)) }
             }
         }
     }

@@ -15,10 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -37,6 +35,8 @@ import id.asisten.app.domain.pengingat.LabelSuaraPengingat
 import id.asisten.app.domain.pengingat.SuaraPengingat
 import id.asisten.app.notifikasi.PemutarContoh
 import id.asisten.app.ui.komponen.TeksPetunjuk
+import id.asisten.app.ui.komponen.TombolTepiNeo
+import id.asisten.app.ui.komponen.TombolTeksNeo
 
 private const val KUNCI_BAWAAN = "bawaan"
 private const val KUNCI_SISTEM = "sistem"
@@ -151,7 +151,7 @@ internal fun BagianSuaraPengingat(vm: PengingatViewModel) {
             onPilih = { if (sistem == null) bukaPemilihNada() },
             onPutar = { putar(KUNCI_SISTEM, vm.alamatContoh(suara)) },
         ) {
-            OutlinedButton(onClick = ::bukaPemilihNada) { Text(if (sistem == null) "Pilih" else "Ganti") }
+            TombolTepiNeo(onClick = ::bukaPemilihNada) { Text(if (sistem == null) "Pilih" else "Ganti") }
         }
         val berkas = suara as? SuaraPengingat.Berkas
         BarisSuara(
@@ -167,7 +167,7 @@ internal fun BagianSuaraPengingat(vm: PengingatViewModel) {
             onPilih = { if (berkas == null && !menyalin) bukaPemilihMusik() },
             onPutar = { putar(KUNCI_BERKAS, vm.alamatContoh(suara)) },
         ) {
-            OutlinedButton(onClick = ::bukaPemilihMusik, enabled = !menyalin) { Text(if (berkas == null) "Pilih" else "Ganti") }
+            TombolTepiNeo(onClick = ::bukaPemilihMusik, enabled = !menyalin) { Text(if (berkas == null) "Pilih" else "Ganti") }
         }
 
         pesan?.let { Text(text = it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
@@ -208,7 +208,7 @@ private fun BarisSuara(
             Text(text = judul, style = MaterialTheme.typography.bodyLarge)
             if (keterangan != null) TeksPetunjuk(keterangan)
         }
-        if (bisaPutar) TextButton(onClick = onPutar) { Text(if (sedangDiputar) "Henti" else "Putar") }
+        if (bisaPutar) TombolTeksNeo(onClick = onPutar) { Text(if (sedangDiputar) "Henti" else "Putar") }
         aksiTambahan?.invoke()
     }
 }

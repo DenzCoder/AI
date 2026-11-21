@@ -3,6 +3,7 @@ package id.asisten.app.ui.profil
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,17 +13,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -43,11 +40,18 @@ import id.asisten.app.domain.pengaturan.ModeTema
 import id.asisten.app.domain.pengaturan.Pengaturan
 import id.asisten.app.domain.pengaturan.UkuranTeks
 import id.asisten.app.domain.profil.NamaPengguna
+import id.asisten.app.ui.komponen.ChipNeo
 import id.asisten.app.ui.komponen.DialogForm
 import id.asisten.app.ui.komponen.FieldTeks
+import id.asisten.app.ui.komponen.JudulHalaman
 import id.asisten.app.ui.komponen.TeksGalat
+import id.asisten.app.ui.komponen.bayanganNeo
+import id.asisten.app.ui.theme.LocalNeo
+import id.asisten.app.ui.theme.tintaKontras
 import id.asisten.app.ui.memori.MemoriScreen
 import id.asisten.app.ui.pengingat.PengingatScreen
+import id.asisten.app.ui.komponen.TombolTepiNeo
+import id.asisten.app.ui.komponen.TombolTeksNeo
 
 @Composable
 fun ProfilScreen(
@@ -91,11 +95,7 @@ fun ProfilScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Text(
-            text = stringResource(R.string.profil_judul),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
+        JudulHalaman(stringResource(R.string.profil_judul))
 
         Bagian(R.string.profil_nama) {
             Row(
@@ -108,7 +108,7 @@ fun ProfilScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = { ubahNama = true }) {
+                TombolTeksNeo(onClick = { ubahNama = true }) {
                     Text(stringResource(R.string.profil_ubah))
                 }
             }
@@ -122,7 +122,7 @@ fun ProfilScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedButton(onClick = { tampilMemori = true }) {
+            TombolTepiNeo(onClick = { tampilMemori = true }) {
                 Text(stringResource(R.string.profil_kelola_memori))
             }
         }
@@ -133,7 +133,7 @@ fun ProfilScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedButton(onClick = { tampilPengingat = true }) {
+            TombolTepiNeo(onClick = { tampilPengingat = true }) {
                 Text(stringResource(R.string.profil_kelola_pengingat))
             }
         }
@@ -141,11 +141,9 @@ fun ProfilScreen(
         Bagian(R.string.profil_tema) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ModeTema.entries.forEach { mode ->
-                    FilterChip(
-                        selected = pengaturan.modeTema == mode,
-                        onClick = { onModeTema(mode) },
-                        label = { Text(stringResource(mode.label())) },
-                    )
+                    ChipNeo(terpilih = pengaturan.modeTema == mode, onClick = { onModeTema(mode) }) {
+                        Text(stringResource(mode.label()))
+                    }
                 }
             }
         }
@@ -165,11 +163,9 @@ fun ProfilScreen(
         Bagian(R.string.profil_ukuran_teks) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 UkuranTeks.entries.forEach { ukuran ->
-                    FilterChip(
-                        selected = pengaturan.ukuranTeks == ukuran,
-                        onClick = { onUkuranTeks(ukuran) },
-                        label = { Text(stringResource(ukuran.label())) },
-                    )
+                    ChipNeo(terpilih = pengaturan.ukuranTeks == ukuran, onClick = { onUkuranTeks(ukuran) }) {
+                        Text(stringResource(ukuran.label()))
+                    }
                 }
             }
         }
@@ -242,26 +238,33 @@ private fun PilihanAksen(
     terpilih: Boolean,
     onClick: () -> Unit,
 ) {
+    val neo = LocalNeo.current
     val warna = Color(aksen.argb)
+    val bentuk = RoundedCornerShape(8.dp)
     val nama = stringResource(aksen.label())
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(warna)
-                .clickable(role = Role.RadioButton, onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (terpilih) {
-                Icon(
-                    Icons.Filled.Check,
-                    contentDescription = stringResource(R.string.terpilih),
-                    tint = if (warna.luminance() > 0.5f) Color(0xFF1A1A1A) else Color.White,
-                )
+        // A square swatch; the chosen one gets a thicker outline, a hard shadow and a check mark.
+        Box(modifier = Modifier.padding(end = 4.dp, bottom = 4.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .then(if (terpilih) Modifier.bayanganNeo(8.dp, neo.bayangan, 4.dp) else Modifier)
+                    .background(warna, bentuk)
+                    .border(if (terpilih) 3.dp else neo.tebal, neo.garis, bentuk)
+                    .clip(bentuk)
+                    .clickable(role = Role.RadioButton, onClick = onClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (terpilih) {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = stringResource(R.string.terpilih),
+                        tint = warna.tintaKontras(),
+                    )
+                }
             }
         }
         Text(text = nama, style = MaterialTheme.typography.labelMedium)

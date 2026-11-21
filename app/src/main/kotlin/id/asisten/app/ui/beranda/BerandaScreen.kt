@@ -11,16 +11,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -42,6 +37,11 @@ import id.asisten.app.domain.waktu.Waktu
 import id.asisten.app.ui.hanako.HanakoAvatar
 import id.asisten.app.ui.wadahViewModel
 import java.time.LocalTime
+import id.asisten.app.ui.komponen.TombolTepiNeo
+import id.asisten.app.ui.komponen.TombolTeksNeo
+import id.asisten.app.ui.komponen.JudulHalaman
+import id.asisten.app.ui.komponen.KartuNeo
+import id.asisten.app.ui.komponen.BilahProgresNeo
 
 private const val BATAS_JADWAL = 5
 
@@ -101,13 +101,11 @@ private fun Dasbor(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(
-                    text = if (nama.isBlank()) salam else "$salam, $nama",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                JudulHalaman(
+                    teks = if (nama.isBlank()) salam else "$salam, $nama",
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = onAtur) {
+                TombolTeksNeo(onClick = onAtur) {
                     Text(stringResource(R.string.beranda_atur_widget))
                 }
             }
@@ -130,9 +128,9 @@ private fun Dasbor(
 private fun KartuHanako() {
     // The expression follows the time of day; it is chosen once when the card first appears.
     val ekspresi = remember { PilihEkspresi.untukWaktu(LocalTime.now()) }
-    Card(
+    KartuNeo(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        warna = MaterialTheme.colorScheme.primary,
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -144,12 +142,10 @@ private fun KartuHanako() {
                 Text(
                     text = stringResource(R.string.hanako_kartu_judul),
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
                 Text(
                     text = stringResource(R.string.hanako_kartu_isi),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }
@@ -158,7 +154,7 @@ private fun KartuHanako() {
 
 @Composable
 private fun KartuWidget(widget: WidgetBeranda, ringkasan: RingkasanBeranda) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    KartuNeo(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -235,10 +231,7 @@ private fun IsiWidget(widget: WidgetBeranda, r: RingkasanBeranda) {
             } else {
                 r.tujuanAktif.forEach { tujuan ->
                     Text(text = tujuan.judul, style = MaterialTheme.typography.bodyMedium)
-                    LinearProgressIndicator(
-                        progress = { tujuan.kemajuan },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    BilahProgresNeo(progres = tujuan.kemajuan, modifier = Modifier.fillMaxWidth())
                     Text(
                         text = FormatAktivitas.persen(tujuan.kemajuan).toString() + "%",
                         style = MaterialTheme.typography.bodySmall,
@@ -284,12 +277,8 @@ private fun PanelAturWidget(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(
-                    text = stringResource(R.string.atur_judul),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                TextButton(onClick = onSelesai) { Text(stringResource(R.string.atur_selesai)) }
+                JudulHalaman(stringResource(R.string.atur_judul), modifier = Modifier.weight(1f))
+                TombolTeksNeo(onClick = onSelesai) { Text(stringResource(R.string.atur_selesai)) }
             }
         }
         item(key = "keterangan") {
@@ -301,10 +290,10 @@ private fun PanelAturWidget(
         }
         item(key = "aksi") {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onUrungkan, enabled = dapatDiurungkan) {
+                TombolTepiNeo(onClick = onUrungkan, enabled = dapatDiurungkan) {
                     Text(stringResource(R.string.atur_urungkan))
                 }
-                OutlinedButton(onClick = onStandar) {
+                TombolTepiNeo(onClick = onStandar) {
                     Text(stringResource(R.string.atur_standar))
                 }
             }
@@ -312,7 +301,7 @@ private fun PanelAturWidget(
         items(urutan, key = { it.name }) { widget ->
             val nama = stringResource(widget.judul())
             val indeks = urutan.indexOf(widget)
-            Card(modifier = Modifier.fillMaxWidth()) {
+            KartuNeo(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,

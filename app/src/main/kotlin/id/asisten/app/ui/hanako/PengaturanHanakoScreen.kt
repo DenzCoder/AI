@@ -13,17 +13,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,6 +52,9 @@ import id.asisten.app.ui.komponen.DialogKonfirmasi
 import id.asisten.app.ui.komponen.JudulBagian
 import id.asisten.app.ui.komponen.JudulHalaman
 import id.asisten.app.ui.komponen.TeksPetunjuk
+import id.asisten.app.ui.komponen.TombolNeo
+import id.asisten.app.ui.komponen.TombolTepiNeo
+import id.asisten.app.ui.komponen.TombolTeksNeo
 
 /** Hanako's settings. Everything shown is real state; the key field is never kept in saved instance state. */
 @Composable
@@ -148,11 +148,11 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
                         PesanKunci.PERLU_SETUJU -> stringResource(R.string.hanako_set_perlu_setuju)
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (pesan == PesanKunci.DISIMPAN) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    color = if (pesan == PesanKunci.DISIMPAN) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
+                TombolNeo(
                     onClick = {
                         vm.simpanKunci(penyedia, kunciInput, setuju)
                         kunciInput = ""
@@ -160,13 +160,13 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
                     enabled = kunciInput.isNotBlank(),
                 ) { Text(stringResource(R.string.hanako_set_simpan)) }
                 if (p.adaKunci) {
-                    OutlinedButton(onClick = { konfirmasiKunci = true }) {
+                    TombolTepiNeo(onClick = { konfirmasiKunci = true }) {
                         Text(stringResource(R.string.hanako_set_hapus_kunci))
                     }
                 }
             }
             // openUri throws when the phone has no browser, so the call is guarded.
-            TextButton(onClick = { runCatching { penanganUri.openUri("https://${penyedia.halamanKunci}") } }) {
+            TombolTeksNeo(onClick = { runCatching { penanganUri.openUri("https://${penyedia.halamanKunci}") } }) {
                 Text(stringResource(R.string.hanako_set_buka_halaman, penyedia.halamanKunci))
             }
         }
@@ -218,11 +218,11 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
+                TombolTepiNeo(
                     onClick = { vm.ubahModel(penyedia, modelInput) },
                     enabled = modelInput.isNotBlank() && modelInput.trim() != p.model,
                 ) { Text(stringResource(R.string.hanako_set_model_simpan)) }
-                Button(
+                TombolNeo(
                     onClick = { vm.ujiKoneksi() },
                     enabled = p.adaKunci && hasilUji != HasilUji.Memproses,
                 ) { Text(stringResource(R.string.hanako_set_uji)) }
@@ -233,7 +233,7 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
                 HasilUji.Berhasil -> Text(
                     text = stringResource(R.string.hanako_set_uji_berhasil, penyedia.nama),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 is HasilUji.Gagal -> Text(
                     text = LabelHanako.galat(h.jenis, h.penyedia) + if (h.rinci.isNotBlank()) " (${h.rinci})" else "",
@@ -302,11 +302,11 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
             }
             statusSuara?.let { Text(LabelSuara.status(it), style = MaterialTheme.typography.bodyMedium) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { vm.bacaKeras(konteks.getString(R.string.hanako_suara_contoh)) }) {
+                TombolNeo(onClick = { vm.bacaKeras(konteks.getString(R.string.hanako_suara_contoh)) }) {
                     Text(stringResource(R.string.hanako_suara_uji))
                 }
                 if (statusSuara?.let { LabelSuara.bisaPasangData(it) } == true) {
-                    OutlinedButton(
+                    TombolTepiNeo(
                         onClick = {
                             try {
                                 konteks.startActivity(Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -323,7 +323,7 @@ fun PengaturanHanakoScreen(vm: HanakoViewModel, onKembali: () -> Unit, modifier:
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             JudulBagian(stringResource(R.string.hanako_set_riwayat))
             TeksPetunjuk(stringResource(R.string.hanako_set_riwayat_ket))
-            OutlinedButton(onClick = { konfirmasiRiwayat = true }) {
+            TombolTepiNeo(onClick = { konfirmasiRiwayat = true }) {
                 Text(stringResource(R.string.hanako_set_hapus_riwayat))
             }
         }
@@ -395,7 +395,7 @@ private fun BarisSuaraMesin(
             Text(text = judul, style = MaterialTheme.typography.bodyLarge)
             if (keterangan != null) TeksPetunjuk(keterangan)
         }
-        TextButton(onClick = onDengar) { Text(stringResource(R.string.hanako_suara_dengar)) }
+        TombolTeksNeo(onClick = onDengar) { Text(stringResource(R.string.hanako_suara_dengar)) }
     }
 }
 
